@@ -15,8 +15,11 @@ Another way to do this, which would allow us to run the snapshot agent anywhere,
 ## Configuration
 
 `addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots.
-`retain` The number of backups to retain.  Currently not implemented.
+
+`retain` The number of backups to retain.  Currently only implemented for AWS and Local storage.
+
 `timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
+
 `token` Specify the token used to call the Vault API.  This can also be specified via the env variable `SNAPSHOT_TOKEN`.
 
 ### Storage options

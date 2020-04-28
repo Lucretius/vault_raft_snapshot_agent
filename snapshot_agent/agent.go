@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	vaultApi "github.com/hashicorp/vault/api"
 )
@@ -21,6 +22,7 @@ import (
 type Snapshotter struct {
 	API           *vaultApi.Client
 	Uploader      *s3manager.Uploader
+	S3Client      *s3.S3
 	GCPBucket     *storage.BucketHandle
 	AzureUploader azblob.ContainerURL
 }
@@ -74,6 +76,7 @@ func (s *Snapshotter) ConfigureS3(config *config.Configuration) error {
 	}
 
 	sess := session.Must(session.NewSession(awsConfig))
+	s.S3Client = s3.New(sess)
 	s.Uploader = s3manager.NewUploader(sess)
 	return nil
 }

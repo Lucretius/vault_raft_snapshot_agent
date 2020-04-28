@@ -23,7 +23,7 @@ func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Conf
 			fileInfo, err := ioutil.ReadDir(config.Local.Path)
 			filesToDelete := make([]os.FileInfo, 0)
 			for _, file := range fileInfo {
-				if strings.Contains(file.Name(), "raft_snapshot-") {
+				if strings.Contains(file.Name(), "raft_snapshot-") && strings.HasSuffix(file.Name(), ".snap") {
 					filesToDelete = append(filesToDelete, file)
 				}
 			}
@@ -37,7 +37,10 @@ func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Conf
 				return file1.ModTime().Before(file2.ModTime())
 			}
 			By(timestamp).Sort(filesToDelete)
-			filesToDelete = fileInfo[0 : len(filesToDelete)-(int(config.Retain)-1)]
+			if len(filesToDelete) <= int(config.Retain) {
+				return fileName, nil
+			}
+			filesToDelete = filesToDelete[0 : len(filesToDelete)-int(config.Retain)]
 			for _, f := range filesToDelete {
 				os.Remove(fmt.Sprintf("%s/%s", config.Local.Path, f.Name()))
 			}
