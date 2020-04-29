@@ -24,11 +24,11 @@ func (s *Snapshotter) CreateS3Snapshot(reader io.ReadWriter, config *config.Conf
 		Bucket:               &config.AWS.Bucket,
 		Key:                  aws.String(fmt.Sprintf("%s/raft_snapshot-%d.snap", keyPrefix, currentTs)),
 		Body:                 reader,
-		ServerSideEncryption: aws.String("AES256"),
+		ServerSideEncryption: nil,
 	}
 
-	if config.AWS.SSE == false {
-		input.ServerSideEncryption = nil
+	if config.AWS.SSE == true {
+		input.ServerSideEncryption = aws.String("AES256")
 	}
 
 	if config.AWS.StaticSnapshotName != "" {
