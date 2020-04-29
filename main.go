@@ -54,7 +54,7 @@ func main() {
 			log.Println(err.Error())
 			log.Fatalln("Unable to determine leader instance.  The snapshot agent will only run on the leader node.  Are you running this daemon on a Vault instance?")
 		}
-		leaderURL := leader.LeaderAddress
+		leaderURL := leader.LeaderClusterAddress
 		u, err := url.Parse(leaderURL)
 		if err != nil {
 			log.Fatalln("Error parsing IP address of leader")
@@ -103,39 +103,15 @@ func logSnapshotError(dest, snapshotPath string, err error) {
 	}
 }
 
+// taken from https://stackoverflow.com/a/37382208
 func getInstanceIP() (string, error) {
-	ifaces, err := net.Interfaces()
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
-		return "", err
+		return "", errors.New("Are you connected to the network?")
 	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", err
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue // not an ipv4 address
-			}
-			return ip.String(), nil
-		}
-	}
-	return "", errors.New("are you connected to the network?")
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	log.Println(localAddr.IP.String())
+	return localAddr.IP.String(), nil
 }
