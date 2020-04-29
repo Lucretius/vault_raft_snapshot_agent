@@ -16,7 +16,7 @@ Another way to do this, which would allow us to run the snapshot agent anywhere,
 
 `addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots.
 
-`retain` The number of backups to retain.  Currently only implemented for AWS and Local storage.
+`retain` The number of backups to retain.  Currently implemented for all storage types, but only tested on AWS and Local storage.
 
 `timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
@@ -56,7 +56,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 #### Google Storage
 
-`bucket` - The Google Storage Bucket to write to
+`bucket` - The Google Storage Bucket to write to.
 
 #### Azure Storage
 
