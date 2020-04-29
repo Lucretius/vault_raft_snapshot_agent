@@ -11,5 +11,5 @@ require (
 	github.com/hashicorp/raft v1.1.2
 	github.com/hashicorp/vault/api v1.0.4
 	go.opencensus.io v0.22.3 // indirect
-	google.golang.org/api v0.22.0 // indirect
+	google.golang.org/api v0.22.0
 )
