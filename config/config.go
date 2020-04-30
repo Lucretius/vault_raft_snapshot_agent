@@ -11,14 +11,15 @@ import (
 
 // Configuration is the overall config object
 type Configuration struct {
-	Address string      `json:"addr"`
-	Retain  int64       `json:"retain"`
-	Timeout string      `json:"freq"`
-	AWS     S3Config    `json:"aws_storage"`
-	Local   LocalConfig `json:"local_storage"`
-	GCP     GCPConfig   `json:"google_storage"`
-	Azure   AzureConfig `json:"azure_blob_storage"`
-	Token   string      `json:"token"`
+	Address  string      `json:"addr"`
+	Retain   int64       `json:"retain"`
+	Timeout  string      `json:"freq"`
+	AWS      S3Config    `json:"aws_storage"`
+	Local    LocalConfig `json:"local_storage"`
+	GCP      GCPConfig   `json:"google_storage"`
+	Azure    AzureConfig `json:"azure_blob_storage"`
+	RoleID   string      `json:"role_id"`
+	SecretID string      `json:"secret_id"`
 }
 
 // AzureConfig is the configuration for Azure blob snapshots

@@ -20,7 +20,9 @@ Another way to do this, which would allow us to run the snapshot agent anywhere,
 
 `timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
-`token` Specify the token used to call the Vault API.  This can also be specified via the env variable `SNAPSHOT_TOKEN`.
+`role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
+
+`secret_id` Specifies the secret_id used to call the Vault API.
 
 ### Storage options
 
@@ -65,3 +67,32 @@ Note that if you specify more than one storage option, *all* options will be wri
 `account_key` - The account key of the storage account
 
 `container_name` The name of the blob container to write to
+
+
+## Authentication
+
+You must do some quick initial setup prior to being able to use the Snapshot Agent.  This involves the following:
+
+`vault login` with an admin user.
+Create the following policy `vault policy write snapshot ./my_policies/snapshot_policy.hcl`
+ where `snapshot_policy.hcl` is:
+
+```hcl
+path "/sys/storage/raft/snapshot"
+{
+  capabilities = ["read"]
+}
+```
+
+Then run:
+```
+vault write auth/approle/role/snapshot token_policies="snapshot"
+vault read auth/approle/role/snapshot/role-id
+vault write -f auth/approle/role/snapshot/secret-id
+```
+
+and copy your secret and role ids, and place them into the snapshot file.  The snapshot agent will use them to request client tokens, so that it can interact with your Vault cluster.  The above policy is the minimum required policy to be able to generate snapshots.  The snapshot agent will automatically renew the token when it is going to expire.
+
+The AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials.
+
+To learn more about AppRole's and why this project chose to use them, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)

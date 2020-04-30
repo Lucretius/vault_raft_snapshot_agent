@@ -49,6 +49,9 @@ func main() {
 		log.Fatalln("Error retrieving Current instance IP.  Verify internet connectivity.")
 	}
 	for {
+		if snapshotter.TokenExpiration.Before(time.Now()) {
+			snapshotter.SetClientTokenFromAppRole(c)
+		}
 		leader, err := snapshotter.API.Sys().Leader()
 		if err != nil {
 			log.Println(err.Error())
@@ -112,6 +115,5 @@ func getInstanceIP() (string, error) {
 	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	log.Println(localAddr.IP.String())
 	return localAddr.IP.String(), nil
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/Azure/azure-storage-blob-go/azblob"
@@ -20,11 +21,12 @@ import (
 )
 
 type Snapshotter struct {
-	API           *vaultApi.Client
-	Uploader      *s3manager.Uploader
-	S3Client      *s3.S3
-	GCPBucket     *storage.BucketHandle
-	AzureUploader azblob.ContainerURL
+	API             *vaultApi.Client
+	Uploader        *s3manager.Uploader
+	S3Client        *s3.S3
+	GCPBucket       *storage.BucketHandle
+	AzureUploader   azblob.ContainerURL
+	TokenExpiration time.Time
 }
 
 func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
@@ -50,10 +52,6 @@ func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
 
 func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 	vaultConfig := vaultApi.DefaultConfig()
-	tokenEnvVar := os.Getenv("SNAPSHOT_TOKEN")
-	if tokenEnvVar != "" {
-		config.Token = tokenEnvVar
-	}
 	vaultConfig.Address = config.Address
 	tlsConfig := &vaultApi.TLSConfig{
 		Insecure: true,
@@ -63,8 +61,22 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 	if err != nil {
 		return err
 	}
-	api.SetToken(config.Token)
 	s.API = api
+	s.SetClientTokenFromAppRole(config)
+	return nil
+}
+
+func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) error {
+	data := map[string]interface{}{
+		"role_id":   config.RoleID,
+		"secret_id": config.SecretID,
+	}
+	resp, err := s.API.Logical().Write("auth/approle/login", data)
+	if err != nil {
+		return fmt.Errorf("error logging into AppRole auth backend: %s", err)
+	}
+	s.API.SetToken(resp.Auth.ClientToken)
+	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(resp.Auth.LeaseDuration)) / 2))
 	return nil
 }
 
