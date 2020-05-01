@@ -93,8 +93,8 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Release Asset amd64
+        id: upload-release-asset-linux_amd64
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,8 +103,8 @@ jobs:
           asset_path: binaries/vault_raft_snapshot_agent_linux_amd64
           asset_name: vault_raft_snapshot_agent_linux_amd64
           asset_content_type: application/octet-stream
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Release Asset arm64
+        id: upload-release-asset-linux_arm64
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -113,8 +113,8 @@ jobs:
           asset_path: binaries/vault_raft_snapshot_agent_linux_arm64
           asset_name: vault_raft_snapshot_agent_linux_arm64
           asset_content_type: application/octet-stream
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Release Asset arm
+        id: upload-release-asset-linux_arm
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
