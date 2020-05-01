@@ -1,3 +1,5 @@
+![Build](https://github.com/Lucretius/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
+
 # Raft Snapshot Agent
 
 Raft Snapshot Agent is a Go binary that is meant to run alongside every member of a Vault cluster and will take periodic snapshots of the Raft database and write it to the desired location.  It's configuration is meant to somewhat parallel that of the [Consul Snapshot Agent](https://www.consul.io/docs/commands/snapshot/agent.html) so many of the same configuration properties you see there will be present here.
@@ -55,7 +57,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots.
 
-`retain` The number of backups to retain.  Currently implemented for all storage types, but only tested on AWS and Local storage.
+`retain` The number of backups to retain.
 
 `timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
@@ -97,7 +99,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 #### Google Storage
 
-`bucket` - The Google Storage Bucket to write to.
+`bucket` - The Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
 
 #### Azure Storage
 
