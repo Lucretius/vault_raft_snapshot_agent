@@ -38,7 +38,9 @@ func (s *Snapshotter) CreateAzureSnapshot(reader io.ReadWriter, config *config.C
 				return o1.Properties.LastModified.Before(o2.Properties.LastModified)
 			}
 			AzureBy(timestamp).Sort(blobs)
-
+			if len(blobs)-int(config.Retain) <= 0 {
+				return url, nil
+			}
 			blobsToDelete := blobs[0 : len(blobs)-int(config.Retain)]
 
 			for _, b := range blobsToDelete {

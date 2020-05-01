@@ -64,6 +64,9 @@ func (s *Snapshotter) CreateS3Snapshot(reader io.ReadWriter, config *config.Conf
 				return o1.LastModified.Before(*o2.LastModified)
 			}
 			S3By(timestamp).Sort(existingSnapshots)
+			if len(existingSnapshots)-int(config.Retain) <= 0 {
+				return o.Location, nil
+			}
 			snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(config.Retain)]
 
 			for i := range snapshotsToDelete {

@@ -17,7 +17,7 @@ type Configuration struct {
 	AWS      S3Config    `json:"aws_storage"`
 	Local    LocalConfig `json:"local_storage"`
 	GCP      GCPConfig   `json:"google_storage"`
-	Azure    AzureConfig `json:"azure_blob_storage"`
+	Azure    AzureConfig `json:"azure_storage"`
 	RoleID   string      `json:"role_id"`
 	SecretID string      `json:"secret_id"`
 }

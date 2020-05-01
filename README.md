@@ -12,6 +12,45 @@ In this way, the daemon will always run on the leader Raft node.
 
 Another way to do this, which would allow us to run the snapshot agent anywhere, is to simply have the daemons form their own Raft cluster, but this approach seemed much more cumbersome.
 
+## Running
+
+The recommended way of running this daemon is using systemctl, since it handles restarts and failure scenarios quite well.  To learn more about systemctl, checkout [this article](https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units).  begin, create the following file at `/etc/systemd/system/snapshot.service`:
+
+```
+[Unit]
+Description="An Open Source Snapshot Service for Raft"
+Documentation=https://github.com/Lucretius/vault_raft_snapshot_agent/
+Requires=network-online.target
+After=network-online.target
+ConditionFileNotEmpty=/etc/vault.d/snapshot.json
+
+[Service]
+Type=simple
+User=vault
+Group=vault
+ExecStart=/usr/local/bin/vault_raft_snapshot_agent
+ExecReload=/usr/local/bin/vault_raft_snapshot_agent
+KillMode=process
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Your configuration is assumed to exist at `/etc/vault.d/snapshot.json` and the actual daemon binary at `/usr/local/bin/vault_raft_snapshot_agent`.
+
+Then just run:
+
+```
+sudo systemctl enable snapshot
+sudo systemctl start snapshot
+```
+
+If your configuration is right and Vault is running on the same host as the agent you will see one of the following:
+
+`Not running on leader node, skipping.` or `Successfully created <type> snapshot to <location>`, depending on if the daemon runs on the leader's host or not.
+
 ## Configuration
 
 `addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots.

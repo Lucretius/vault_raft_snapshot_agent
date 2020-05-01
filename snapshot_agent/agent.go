@@ -42,7 +42,13 @@ func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
 		}
 	}
 	if config.GCP.Bucket != "" {
-		err = snapshotter.ConfigureS3(config)
+		err = snapshotter.ConfigureGCP(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if config.Azure.ContainerName != "" {
+		err = snapshotter.ConfigureAzure(config)
 		if err != nil {
 			return nil, err
 		}
