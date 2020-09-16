@@ -93,6 +93,14 @@ func (s *Snapshotter) ConfigureS3(config *config.Configuration) error {
 		awsConfig.Credentials = credentials.NewStaticCredentials(config.AWS.AccessKeyID, config.AWS.SecretAccessKey, "")
 	}
 
+	if config.AWS.Endpoint != "" {
+		awsConfig.Endpoint = aws.String(config.AWS.Endpoint)
+	}
+
+	if config.AWS.S3ForcePathStyle != false {
+		awsConfig.S3ForcePathStyle = aws.Bool(config.AWS.S3ForcePathStyle)
+	}
+
 	sess := session.Must(session.NewSession(awsConfig))
 	s.S3Client = s3.New(sess)
 	s.Uploader = s3manager.NewUploader(sess)
