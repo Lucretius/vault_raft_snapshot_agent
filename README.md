@@ -59,7 +59,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `retain` The number of backups to retain.
 
-`timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
+`frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
 

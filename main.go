@@ -38,10 +38,10 @@ func main() {
 	}
 
 	snapshotter, err := snapshot_agent.NewSnapshotter(c)
-	timeout, err := time.ParseDuration(c.Timeout)
+	frequency, err := time.ParseDuration(c.Frequency)
 
 	if err != nil {
-		timeout = time.Hour
+		frequency = time.Hour
 	}
 
 	currentIP, err := getInstanceIP()
@@ -90,7 +90,7 @@ func main() {
 			}
 		}
 		select {
-		case <-time.After(timeout):
+		case <-time.After(frequency):
 			continue
 		case <-done:
 			os.Exit(1)

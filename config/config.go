@@ -13,7 +13,7 @@ import (
 type Configuration struct {
 	Address  string      `json:"addr"`
 	Retain   int64       `json:"retain"`
-	Timeout  string      `json:"freq"`
+	Frequency string      `json:"frequency"`
 	AWS      S3Config    `json:"aws_storage"`
 	Local    LocalConfig `json:"local_storage"`
 	GCP      GCPConfig   `json:"google_storage"`
