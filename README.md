@@ -59,7 +59,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `retain` The number of backups to retain.
 
-`timeout` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
+`frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
 
@@ -71,7 +71,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 `local_storage` - Object for writing to a file on disk.
 
-`aws_storage` - Object for writing to an S3 bucket.
+`aws_storage` - Object for writing to an S3 bucket (Support AWS S3 but also S3 Compatible Storage).
 
 `google_storage` - Object for writing to GCS.
 
@@ -86,6 +86,10 @@ Note that if you specify more than one storage option, *all* options will be wri
 `access_key_id` - Recommended to use the standard `AWS_ACCESS_KEY_ID` env var, but its possible to specify this in the config
 
 `secret_access_key` - Recommended to use the standard `SECRET_ACCESS_KEY` env var, but its possible to specify this in the config
+
+`s3_endpoint` - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
+
+`s3_force_path_style` - Needed if your S3 Compatible storage support only path-style or you would like to use S3's FIPS Endpoint.
 
 `s3_region` - S3 region as is required for programmatic interaction with AWS
 
