@@ -65,6 +65,8 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `secret_id` Specifies the secret_id used to call the Vault API.
 
+`approle` Specifies the approle name used to login.
+
 ### Storage options
 
 Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local_storage` and `aws_storage` will write to both locations.
