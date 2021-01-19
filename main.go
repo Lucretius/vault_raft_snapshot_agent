@@ -35,14 +35,15 @@ func main() {
 	}
 
 	snapshotter, err := snapshot_agent.NewSnapshotter(c)
+	if err != nil {
+		log.Fatalln("Cannot instantiate snapshotter.", err)
+	}
 	frequency, err := time.ParseDuration(c.Frequency)
 
 	if err != nil {
 		frequency = time.Hour
 	}
-	if err != nil {
-		log.Fatalln("Error retrieving Current instance IP.  Verify internet connectivity.")
-	}
+
 	for {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			snapshotter.SetClientTokenFromAppRole(c)

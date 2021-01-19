@@ -58,7 +58,9 @@ func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
 
 func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 	vaultConfig := vaultApi.DefaultConfig()
-	vaultConfig.Address = config.Address
+	if config.Address != "" {
+		vaultConfig.Address = config.Address
+	}
 	tlsConfig := &vaultApi.TLSConfig{
 		Insecure: true,
 	}

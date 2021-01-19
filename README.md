@@ -55,7 +55,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 ## Configuration
 
-`addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots.
+`addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots. Defaults to "http://127.0.0.1:8200".
 
 `retain` The number of backups to retain.
 
@@ -65,7 +65,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `secret_id` Specifies the secret_id used to call the Vault API.
 
-`approle` Specifies the approle name used to login.
+`approle` Specifies the approle name used to login.  Defaults to "approle".
 
 ### Storage options
 
