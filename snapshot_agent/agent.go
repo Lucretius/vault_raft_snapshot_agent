@@ -68,7 +68,10 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		return err
 	}
 	s.API = api
-	s.SetClientTokenFromAppRole(config)
+	err = s.SetClientTokenFromAppRole(config)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -77,7 +80,11 @@ func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) er
 		"role_id":   config.RoleID,
 		"secret_id": config.SecretID,
 	}
-	resp, err := s.API.Logical().Write("auth/approle/login", data)
+	approle := "approle"
+	if config.Approle != "" {
+		approle = config.Approle
+	}
+	resp, err := s.API.Logical().Write("auth/" + approle + "/login", data)
 	if err != nil {
 		return fmt.Errorf("error logging into AppRole auth backend: %s", err)
 	}
