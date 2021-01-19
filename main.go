@@ -2,10 +2,7 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"log"
-	"net"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,8 +40,6 @@ func main() {
 	if err != nil {
 		frequency = time.Hour
 	}
-
-	currentIP, err := getInstanceIP()
 	if err != nil {
 		log.Fatalln("Error retrieving Current instance IP.  Verify internet connectivity.")
 	}
@@ -57,13 +52,8 @@ func main() {
 			log.Println(err.Error())
 			log.Fatalln("Unable to determine leader instance.  The snapshot agent will only run on the leader node.  Are you running this daemon on a Vault instance?")
 		}
-		leaderURL := leader.LeaderClusterAddress
-		u, err := url.Parse(leaderURL)
-		if err != nil {
-			log.Fatalln("Error parsing IP address of leader")
-		}
-		leaderIP := u.Hostname()
-		if leaderIP != currentIP {
+		leaderIsSelf := leader.IsSelf
+		if ! leaderIsSelf {
 			log.Println("Not running on leader node, skipping.")
 		} else {
 			var snapshot bytes.Buffer
@@ -104,16 +94,4 @@ func logSnapshotError(dest, snapshotPath string, err error) {
 	} else {
 		log.Printf("Successfully created %s snapshot to %s\n", dest, snapshotPath)
 	}
-}
-
-// taken from https://stackoverflow.com/a/37382208
-func getInstanceIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return "", errors.New("Are you connected to the network?")
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
 }
