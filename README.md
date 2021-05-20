@@ -67,6 +67,8 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `approle` Specifies the approle name used to login.  Defaults to "approle".
 
+`token_path` Specifies the path to a file containing a Vault token, if one exists (e.g. a Vault Agent might already be running along the Vault Server, and it writes a token to the Sink file path). If this is specified, approle authentication is skipped. This token must have a policy with at least the permissions described in the authentication section.
+
 ### Storage options
 
 Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local_storage` and `aws_storage` will write to both locations.
@@ -118,7 +120,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 ## Authentication
 
-You must do some quick initial setup prior to being able to use the Snapshot Agent.  This involves the following:
+Unless another process like a Vault Agent is providing the Snapshot Agent with a token (specified via the `token_path` configuration), you must do some quick initial setup prior to being able to use the Snapshot Agent.  This involves the following:
 
 `vault login` with an admin user.
 Create the following policy `vault policy write snapshot ./my_policies/snapshot_policy.hcl`

@@ -21,6 +21,7 @@ type Configuration struct {
 	RoleID    string      `json:"role_id"`
 	SecretID  string      `json:"secret_id"`
 	Approle   string      `json:"approle"`
+	TokenPath string      `json:"token_path"`
 }
 
 // AzureConfig is the configuration for Azure blob snapshots
