@@ -2,8 +2,10 @@ package snapshot_agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -70,14 +72,36 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		return err
 	}
 	s.API = api
-	err = s.SetClientTokenFromAppRole(config)
+	err = s.SetClientToken(config)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) error {
+func (s *Snapshotter) SetClientToken(config *config.Configuration) error {
+	if config.TokenPath != "" {
+		// The process generating this token file (e.g. a Vault Agent) should be
+		// renewing or replacing the underlying token appropriately.
+		cBytes, err := ioutil.ReadFile(config.TokenPath)
+		if err != nil {
+			return fmt.Errorf("error reading the given TokenPath: %s", err)
+		}
+		token := string(cBytes)
+		s.API.SetToken(token)
+		childInfo, err := s.API.Auth().Token().LookupSelf()
+		if err != nil {
+			s.API.ClearToken()
+			return fmt.Errorf("error looking up provided token: %s", err)
+		}
+		ttl, err := childInfo.Data["ttl"].(json.Number).Int64()
+		if err != nil {
+			s.API.ClearToken()
+			return fmt.Errorf("error converting ttl to int: %s", err)
+		}
+		s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(ttl)) / 2))
+		return nil
+	}
 	data := map[string]interface{}{
 		"role_id":   config.RoleID,
 		"secret_id": config.SecretID,
@@ -86,7 +110,7 @@ func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) er
 	if config.Approle != "" {
 		approle = config.Approle
 	}
-	resp, err := s.API.Logical().Write("auth/" + approle + "/login", data)
+	resp, err := s.API.Logical().Write("auth/"+approle+"/login", data)
 	if err != nil {
 		return fmt.Errorf("error logging into AppRole auth backend: %s", err)
 	}
