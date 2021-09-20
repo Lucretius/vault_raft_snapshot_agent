@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -70,11 +71,10 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		return err
 	}
 	s.API = api
-	err = s.SetClientTokenFromAppRole(config)
-	if err != nil {
-		return err
+	if config.VaultAuthMethod == "k8s" {
+		return s.SetClientTokenFromK8sAuth(config)
 	}
-	return nil
+	return s.SetClientTokenFromAppRole(config)
 }
 
 func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) error {
@@ -86,12 +86,49 @@ func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) er
 	if config.Approle != "" {
 		approle = config.Approle
 	}
-	resp, err := s.API.Logical().Write("auth/" + approle + "/login", data)
+	resp, err := s.API.Logical().Write("auth/"+approle+"/login", data)
 	if err != nil {
 		return fmt.Errorf("error logging into AppRole auth backend: %s", err)
 	}
 	s.API.SetToken(resp.Auth.ClientToken)
 	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(resp.Auth.LeaseDuration)) / 2))
+	return nil
+}
+
+func (s *Snapshotter) SetClientTokenFromK8sAuth(config *config.Configuration) error {
+
+	if config.K8sAuthPath == "" || config.K8sAuthRole == "" {
+		return errors.New("missing k8s auth definitions")
+	}
+
+	jwt, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return err
+	}
+	data := map[string]string{
+		"role": config.K8sAuthRole,
+		"jwt":  string(jwt),
+	}
+
+	login := path.Clean("/v1/auth/" + config.K8sAuthPath + "/login")
+	req := s.API.NewRequest("POST", login)
+	req.SetJSONBody(data)
+
+	resp, err := s.API.RawRequest(req)
+	if err != nil {
+		return err
+	}
+	if respErr := resp.Error(); respErr != nil {
+		return respErr
+	}
+
+	var result vaultApi.Secret
+	if err := resp.DecodeJSON(&result); err != nil {
+		return err
+	}
+
+	s.API.SetToken(result.Auth.ClientToken)
+	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(result.Auth.LeaseDuration)) / 2))
 	return nil
 }
 
