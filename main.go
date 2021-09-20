@@ -46,6 +46,9 @@ func main() {
 
 	for {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
+			if c.VaultAuthMethod == "k8s" {
+				snapshotter.SetClientTokenFromK8sAuth(c)
+			}
 			snapshotter.SetClientTokenFromAppRole(c)
 		}
 		leader, err := snapshotter.API.Sys().Leader()
@@ -54,7 +57,7 @@ func main() {
 			log.Fatalln("Unable to determine leader instance.  The snapshot agent will only run on the leader node.  Are you running this daemon on a Vault instance?")
 		}
 		leaderIsSelf := leader.IsSelf
-		if ! leaderIsSelf {
+		if !leaderIsSelf {
 			log.Println("Not running on leader node, skipping.")
 		} else {
 			var snapshot bytes.Buffer
