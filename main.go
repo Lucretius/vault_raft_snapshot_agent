@@ -46,10 +46,12 @@ func main() {
 
 	for {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
-			if c.VaultAuthMethod == "k8s" {
+			switch c.VaultAuthMethod {
+			case "k8s":
 				snapshotter.SetClientTokenFromK8sAuth(c)
+			default:
+				snapshotter.SetClientTokenFromAppRole(c)
 			}
-			snapshotter.SetClientTokenFromAppRole(c)
 		}
 		leader, err := snapshotter.API.Sys().Leader()
 		if err != nil {
