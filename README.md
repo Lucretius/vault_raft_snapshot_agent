@@ -61,11 +61,24 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
+
+### Default authentication mode
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
 
 `secret_id` Specifies the secret_id used to call the Vault API.
 
 `approle` Specifies the approle name used to login.  Defaults to "approle".
+
+
+### Kubernetes authentication mode
+Incase we're running the application under kubernetes, we can use Vault's Kubernetes Auth
+as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/auth/kubernetes)
+
+`vault_auth_method` Set it to "k8s", otherwise, approle will be chosen
+
+`vault_auth_role` Specifies vault k8s auth role
+
+`vault_auth_path` Specifies vault k8s auth path
 
 ### Storage options
 
@@ -118,6 +131,9 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 ## Authentication
 
+
+### Default authentication mode
+
 You must do some quick initial setup prior to being able to use the Snapshot Agent.  This involves the following:
 
 `vault login` with an admin user.
@@ -143,3 +159,8 @@ and copy your secret and role ids, and place them into the snapshot file.  The s
 The AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials.
 
 To learn more about AppRole's and why this project chose to use them, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
+
+
+### Kubernetes authentication mode
+
+To Enable Kubernetes authentication mode, we should follow these steps from [the Vault docs](https://www.vaultproject.io/docs/auth/kubernetes#configuration)

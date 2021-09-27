@@ -11,16 +11,19 @@ import (
 
 // Configuration is the overall config object
 type Configuration struct {
-	Address   string      `json:"addr"`
-	Retain    int64       `json:"retain"`
-	Frequency string      `json:"frequency"`
-	AWS       S3Config    `json:"aws_storage"`
-	Local     LocalConfig `json:"local_storage"`
-	GCP       GCPConfig   `json:"google_storage"`
-	Azure     AzureConfig `json:"azure_storage"`
-	RoleID    string      `json:"role_id"`
-	SecretID  string      `json:"secret_id"`
-	Approle   string      `json:"approle"`
+	Address         string      `json:"addr"`
+	Retain          int64       `json:"retain"`
+	Frequency       string      `json:"frequency"`
+	AWS             S3Config    `json:"aws_storage"`
+	Local           LocalConfig `json:"local_storage"`
+	GCP             GCPConfig   `json:"google_storage"`
+	Azure           AzureConfig `json:"azure_storage"`
+	RoleID          string      `json:"role_id"`
+	SecretID        string      `json:"secret_id"`
+	Approle         string      `json:"approle"`
+	K8sAuthRole     string      `json:"k8s_auth_role,omitempty"`
+	K8sAuthPath     string      `json:"k8s_auth_path,omitempty"`
+	VaultAuthMethod string      `json:"vault_auth_method,omitempty"`
 }
 
 // AzureConfig is the configuration for Azure blob snapshots
