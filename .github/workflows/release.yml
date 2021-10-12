@@ -16,6 +16,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Setup go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
       - name: compile linux amd64
         env:
           GOARCH: amd64
@@ -39,6 +43,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Setup go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
       - name: compile arm64
         env:
           GOARCH: arm64
@@ -62,6 +70,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Setup go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
       - name: compile arm
         env:
           GOARCH: arm
