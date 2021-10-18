@@ -84,6 +84,10 @@ func main() {
 				snapshotPath, err := snapshotter.CreateAzureSnapshot(&snapshot, c, now)
 				logSnapshotError("azure", snapshotPath, err)
 			}
+			if c.Swift.Container != "" {
+				snapshotPath, err := snapshotter.CreateSwiftSnapshot(&snapshot, c, now)
+				logSnapshotError("swift", snapshotPath, err)
+			}
 		}
 		select {
 		case <-time.After(frequency):

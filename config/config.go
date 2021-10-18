@@ -18,6 +18,7 @@ type Configuration struct {
 	Local           LocalConfig `json:"local_storage"`
 	GCP             GCPConfig   `json:"google_storage"`
 	Azure           AzureConfig `json:"azure_storage"`
+	Swift           SwiftConfig `json:"swift_storage"`
 	RoleID          string      `json:"role_id"`
 	SecretID        string      `json:"secret_id"`
 	Approle         string      `json:"approle"`
@@ -55,6 +56,17 @@ type S3Config struct {
 	SSE                bool   `json:"s3_server_side_encryption"`
 	StaticSnapshotName string `json:"s3_static_snapshot_name"`
 	S3ForcePathStyle   bool   `json:"s3_force_path_style"`
+}
+
+// Openstack Swift configuration
+type SwiftConfig struct {
+	UserName  string `json:"username"`
+	ApiKey    string `json:"api_key"`
+	AuthUrl   string `json:"auth_url"`
+	Region    string `json:"region"`
+	Container string `json:"container"`
+	TenantId  string `json:"tenant_id"`
+	Domain    string `json:"domain"`
 }
 
 // ReadConfig reads the configuration file

@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	vaultApi "github.com/hashicorp/vault/api"
+	"github.com/ncw/swift/v2"
 )
 
 type Snapshotter struct {
@@ -27,6 +28,7 @@ type Snapshotter struct {
 	S3Client        *s3.S3
 	GCPBucket       *storage.BucketHandle
 	AzureUploader   azblob.ContainerURL
+	SwiftConnection swift.Connection
 	TokenExpiration time.Time
 }
 
@@ -50,6 +52,12 @@ func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
 	}
 	if config.Azure.ContainerName != "" {
 		err = snapshotter.ConfigureAzure(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if config.Swift.Container != "" {
+		err = snapshotter.ConfigureSwift(config)
 		if err != nil {
 			return nil, err
 		}
@@ -184,5 +192,31 @@ func (s *Snapshotter) ConfigureAzure(config *config.Configuration) error {
 		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, config.Azure.ContainerName))
 
 	s.AzureUploader = azblob.NewContainerURL(*URL, p)
+	return nil
+}
+
+func (s *Snapshotter) ConfigureSwift(config *config.Configuration) error {
+	ctx := context.Background()
+
+	c := swift.Connection{
+		UserName: config.Swift.UserName,
+		ApiKey:   config.Swift.ApiKey,
+		AuthUrl:  config.Swift.AuthUrl,
+		Region:   config.Swift.Region,
+		TenantId: config.Swift.TenantId,
+		Domain:   config.Swift.Domain,
+	}
+
+	err := c.Authenticate(ctx)
+	if err != nil {
+		log.Fatal("Invalid credentials with error: " + err.Error())
+	}
+
+	_, _, err = c.Container(ctx, config.Swift.Container)
+	if err != nil {
+		log.Fatal("Invalid container name: " + err.Error())
+	}
+
+	s.SwiftConnection = c
 	return nil
 }
