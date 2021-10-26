@@ -62,6 +62,13 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 	if config.Address != "" {
 		vaultConfig.Address = config.Address
 	}
+
+	if config.Timeout != "" {
+		t, err := time.ParseDuration(config.Timeout)
+		if err == nil {
+			vaultConfig.Timeout = t
+		}
+	}
 	tlsConfig := &vaultApi.TLSConfig{
 		Insecure: true,
 	}
