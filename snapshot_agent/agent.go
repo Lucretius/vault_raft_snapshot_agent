@@ -67,6 +67,7 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		t, err := time.ParseDuration(config.Timeout)
 		if err == nil {
 			vaultConfig.Timeout = t
+			log.Printf("Vault client timeout has been set to %s", vaultConfig.Timeout)
 		}
 	}
 	tlsConfig := &vaultApi.TLSConfig{
