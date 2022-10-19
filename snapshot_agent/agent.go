@@ -20,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	vaultApi "github.com/hashicorp/vault/api"
 	vaultAuthAws "github.com/hashicorp/vault/api/auth/aws"
+	hashiAwsUtil "github.com/hashicorp/go-secure-stdlib/awsutil"
+
 )
 
 type Snapshotter struct {
@@ -108,9 +110,13 @@ func (s *Snapshotter) SetClientTokenFromAwsAuth(config *config.Configuration) er
 	var awsAuthOpts = []vaultAuthAws.LoginOption{}
 
 	if config.AuthNonce != "" {
-		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithNonce(config.AuthNonce),vaultAuthAws.WithEC2Auth())
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithNonce(config.AuthNonce), vaultAuthAws.WithEC2Auth())
 	} else {
-		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithIAMAuth())
+		region, err := hashiAwsUtil.GetRegion("")
+		if err != nil {
+			return fmt.Errorf("error determining aws region: %s", err)
+		}
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithIAMAuth(), vaultAuthAws.WithRegion(region))
 	}
 
 	if config.AuthRole != "" {
