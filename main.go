@@ -49,6 +49,8 @@ func main() {
 			switch c.VaultAuthMethod {
 			case "k8s":
 				snapshotter.SetClientTokenFromK8sAuth(c)
+			case "aws":
+				snapshotter.SetClientTokenFromAwsAuth(c)
 			default:
 				snapshotter.SetClientTokenFromAppRole(c)
 			}
