@@ -172,7 +172,8 @@ func (s *Snapshotter) ConfigureAzure(config *config.Configuration) error {
 	if os.Getenv("AZURE_STORAGE_ACCESS_KEY") != "" {
 		accountKey = os.Getenv("AZURE_STORAGE_ACCESS_KEY")
 	}
-	if len(accountName) == 0 || len(accountKey) == 0 {
+	cloudName := config.Azure.CloudName
+	if len(cloudName) == 0 || len(accountName) == 0 || len(accountKey) == 0 {
 		return errors.New("Invalid Azure configuration")
 	}
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
@@ -180,8 +181,15 @@ func (s *Snapshotter) ConfigureAzure(config *config.Configuration) error {
 		log.Fatal("Invalid credentials with error: " + err.Error())
 	}
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, config.Azure.ContainerName))
+	blobUrl := ""
+	if cloudName == "AzureChinaCloud" {
+		blobUrl = "https://" + accountName + ".blob.core.chinacloudapi.cn/" + config.Azure.ContainerName
+	} else if cloudName == "AzurePublicCloud" {
+		blobUrl = "https://" + accountName + ".blob.core.windows.net/" + config.Azure.ContainerName
+	} else {
+		log.Fatal("Specifed %s cloud_name is not alloed in Azure configurations. You can use either AzurePublicCloud or AzureChinaCloud", cloudName)
+	}
+	URL, _ := url.Parse(blobUrl)
 
 	s.AzureUploader = azblob.NewContainerURL(*URL, p)
 	return nil
