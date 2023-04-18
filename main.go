@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -44,6 +45,16 @@ func main() {
 		frequency = time.Hour
 	}
 
+	snapshotTimeout := 60 * time.Second
+
+	if c.SnapshotTimeout != "" {
+		snapshotTimeout, err = time.ParseDuration(c.SnapshotTimeout)
+
+		if err != nil {
+			log.Fatalln("Unable to parse snapshot timeout", err)
+		}
+	}
+
 	for {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			switch c.VaultAuthMethod {
@@ -63,10 +74,14 @@ func main() {
 			log.Println("Not running on leader node, skipping.")
 		} else {
 			var snapshot bytes.Buffer
-			err := snapshotter.API.Sys().RaftSnapshot(&snapshot)
+
+			ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
+			err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, &snapshot)
 			if err != nil {
 				log.Fatalln("Unable to generate snapshot", err.Error())
 			}
+			cancel()
+
 			now := time.Now().UnixNano()
 			if c.Local.Path != "" {
 				snapshotPath, err := snapshotter.CreateLocalSnapshot(&snapshot, c, now)

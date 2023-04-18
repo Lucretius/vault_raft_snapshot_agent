@@ -61,6 +61,7 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
+`snapshot_timeout` Timeout for creating snapshots.  Examples: `30s`, `1h`. Default: `60s`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
 ### Default authentication mode
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
