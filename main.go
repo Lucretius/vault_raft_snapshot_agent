@@ -59,9 +59,17 @@ func main() {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			switch c.VaultAuthMethod {
 			case "k8s":
-				snapshotter.SetClientTokenFromK8sAuth(c)
+				err := snapshotter.SetClientTokenFromK8sAuth(c)
+				if err != nil {
+					log.Fatalln("Unable to get token from k8s auth")
+					return
+				}
 			default:
-				snapshotter.SetClientTokenFromAppRole(c)
+				err := snapshotter.SetClientTokenFromAppRole(c)
+				if err != nil {
+					log.Fatalln("Unable to get token from approle")
+					return
+				}
 			}
 		}
 		leader, err := snapshotter.API.Sys().Leader()

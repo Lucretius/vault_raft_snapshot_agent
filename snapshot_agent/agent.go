@@ -65,7 +65,10 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 	tlsConfig := &vaultApi.TLSConfig{
 		Insecure: true,
 	}
-	vaultConfig.ConfigureTLS(tlsConfig)
+	err := vaultConfig.ConfigureTLS(tlsConfig)
+	if err != nil {
+		return err
+	}
 	api, err := vaultApi.NewClient(vaultConfig)
 	if err != nil {
 		return err
@@ -91,7 +94,7 @@ func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) er
 		return fmt.Errorf("error logging into AppRole auth backend: %s", err)
 	}
 	s.API.SetToken(resp.Auth.ClientToken)
-	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(resp.Auth.LeaseDuration)) / 2))
+	s.TokenExpiration = time.Now().Add((time.Second * time.Duration(resp.Auth.LeaseDuration)) / 2)
 	return nil
 }
 
@@ -105,30 +108,19 @@ func (s *Snapshotter) SetClientTokenFromK8sAuth(config *config.Configuration) er
 	if err != nil {
 		return err
 	}
-	data := map[string]string{
+	data := map[string]interface{}{
 		"role": config.K8sAuthRole,
 		"jwt":  string(jwt),
 	}
 
-	login := path.Clean("/v1/auth/" + config.K8sAuthPath + "/login")
-	req := s.API.NewRequest("POST", login)
-	req.SetJSONBody(data)
-
-	resp, err := s.API.RawRequest(req)
+	login := path.Clean("auth/" + config.K8sAuthPath + "/login")
+	result, err := s.API.Logical().Write(login, data)
 	if err != nil {
-		return err
-	}
-	if respErr := resp.Error(); respErr != nil {
-		return respErr
-	}
-
-	var result vaultApi.Secret
-	if err := resp.DecodeJSON(&result); err != nil {
 		return err
 	}
 
 	s.API.SetToken(result.Auth.ClientToken)
-	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(result.Auth.LeaseDuration)) / 2))
+	s.TokenExpiration = time.Now().Add((time.Second * time.Duration(result.Auth.LeaseDuration)) / 2)
 	return nil
 }
 

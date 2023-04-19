@@ -3,7 +3,6 @@ package snapshot_agent
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -15,16 +14,20 @@ import (
 // CreateLocalSnapshot writes snapshot to disk location
 func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Configuration, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", config.Local.Path, currentTs)
-	err := ioutil.WriteFile(fileName, buf.Bytes(), 0644)
+	err := os.WriteFile(fileName, buf.Bytes(), 0644)
 	if err != nil {
 		return "", err
 	} else {
 		if config.Retain > 0 {
-			fileInfo, err := ioutil.ReadDir(config.Local.Path)
+			files, err := os.ReadDir(config.Local.Path)
 			filesToDelete := make([]os.FileInfo, 0)
-			for _, file := range fileInfo {
+			for _, file := range files {
 				if strings.Contains(file.Name(), "raft_snapshot-") && strings.HasSuffix(file.Name(), ".snap") {
-					filesToDelete = append(filesToDelete, file)
+					info, err := file.Info()
+					if err != nil {
+						return fileName, err
+					}
+					filesToDelete = append(filesToDelete, info)
 				}
 			}
 			if err != nil {
@@ -42,7 +45,11 @@ func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Conf
 			}
 			filesToDelete = filesToDelete[0 : len(filesToDelete)-int(config.Retain)]
 			for _, f := range filesToDelete {
-				os.Remove(fmt.Sprintf("%s/%s", config.Local.Path, f.Name()))
+				err := os.Remove(fmt.Sprintf("%s/%s", config.Local.Path, f.Name()))
+				if err != nil {
+					log.Println("Cannot delete old snapshot")
+					return fileName, err
+				}
 			}
 		}
 		return fileName, nil

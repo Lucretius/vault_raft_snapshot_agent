@@ -45,7 +45,7 @@ func (s *Snapshotter) CreateAzureSnapshot(reader io.ReadWriter, config *config.C
 
 			for _, b := range blobsToDelete {
 				val := s.AzureUploader.NewBlockBlobURL(b.Name)
-				val.Delete(deleteCtx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+				_, err := val.Delete(deleteCtx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 				if err != nil {
 					log.Println("Cannot delete old snapshot")
 					return url, err

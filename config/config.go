@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -64,7 +63,7 @@ func ReadConfig() (*Configuration, error) {
 	if len(os.Args) > 1 {
 		file = os.Args[1]
 	}
-	cBytes, err := ioutil.ReadFile(file)
+	cBytes, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Cannot read configuration file: %v", err.Error())
 	}
