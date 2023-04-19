@@ -1,8 +1,8 @@
 package snapshot_agent
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -12,9 +12,14 @@ import (
 )
 
 // CreateLocalSnapshot writes snapshot to disk location
-func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateLocalSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", config.Local.Path, currentTs)
-	err := os.WriteFile(fileName, buf.Bytes(), 0644)
+	file, err := os.Create(fileName)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(file, reader)
+
 	if err != nil {
 		return "", err
 	} else {

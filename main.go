@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"os"
@@ -81,32 +80,41 @@ func main() {
 		if !leaderIsSelf {
 			log.Println("Not running on leader node, skipping.")
 		} else {
-			var snapshot bytes.Buffer
 
-			ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
-			err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, &snapshot)
-			if err != nil {
-				log.Fatalln("Unable to generate snapshot", err.Error())
-			}
-			cancel()
+			func() {
+				snapshot, err := os.CreateTemp("", "snapshot")
 
-			now := time.Now().UnixNano()
-			if c.Local.Path != "" {
-				snapshotPath, err := snapshotter.CreateLocalSnapshot(&snapshot, c, now)
-				logSnapshotError("local", snapshotPath, err)
-			}
-			if c.AWS.Bucket != "" {
-				snapshotPath, err := snapshotter.CreateS3Snapshot(&snapshot, c, now)
-				logSnapshotError("aws", snapshotPath, err)
-			}
-			if c.GCP.Bucket != "" {
-				snapshotPath, err := snapshotter.CreateGCPSnapshot(&snapshot, c, now)
-				logSnapshotError("gcp", snapshotPath, err)
-			}
-			if c.Azure.ContainerName != "" {
-				snapshotPath, err := snapshotter.CreateAzureSnapshot(&snapshot, c, now)
-				logSnapshotError("azure", snapshotPath, err)
-			}
+				if err != nil {
+					log.Fatalln("Unable to create temporary snapshot file", err.Error())
+				}
+
+				defer os.Remove(snapshot.Name())
+
+				ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
+				defer cancel()
+				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
+				if err != nil {
+					log.Fatalln("Unable to generate snapshot", err.Error())
+				}
+
+				now := time.Now().UnixNano()
+				if c.Local.Path != "" {
+					snapshotPath, err := snapshotter.CreateLocalSnapshot(snapshot, c, now)
+					logSnapshotError("local", snapshotPath, err)
+				}
+				if c.AWS.Bucket != "" {
+					snapshotPath, err := snapshotter.CreateS3Snapshot(snapshot, c, now)
+					logSnapshotError("aws", snapshotPath, err)
+				}
+				if c.GCP.Bucket != "" {
+					snapshotPath, err := snapshotter.CreateGCPSnapshot(snapshot, c, now)
+					logSnapshotError("gcp", snapshotPath, err)
+				}
+				if c.Azure.ContainerName != "" {
+					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
+					logSnapshotError("azure", snapshotPath, err)
+				}
+			}()
 		}
 		select {
 		case <-time.After(frequency):

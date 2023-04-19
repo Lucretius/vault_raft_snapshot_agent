@@ -1,9 +1,9 @@
 package snapshot_agent
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"sort"
 
@@ -13,12 +13,13 @@ import (
 )
 
 // CreateGCPSnapshot writes snapshot to google storage
-func (s *Snapshotter) CreateGCPSnapshot(b *bytes.Buffer, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateGCPSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
 	obj := s.GCPBucket.Object(fileName)
 	w := obj.NewWriter(context.Background())
 
-	if _, err := w.Write(b.Bytes()); err != nil {
+	_, err := io.Copy(w, reader)
+	if err != nil {
 		return "", err
 	}
 

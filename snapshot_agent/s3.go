@@ -14,7 +14,7 @@ import (
 )
 
 // CreateS3Snapshot writes snapshot to s3 location
-func (s *Snapshotter) CreateS3Snapshot(reader io.ReadWriter, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateS3Snapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
 	keyPrefix := "raft_snapshots"
 	if config.AWS.KeyPrefix != "" {
 		keyPrefix = config.AWS.KeyPrefix

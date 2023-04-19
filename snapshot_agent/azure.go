@@ -12,7 +12,7 @@ import (
 )
 
 // CreateAzureSnapshot writes snapshot to azure blob storage
-func (s *Snapshotter) CreateAzureSnapshot(reader io.ReadWriter, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateAzureSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
 	ctx := context.Background()
 	url := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
 	blob := s.AzureUploader.NewBlockBlobURL(url)
