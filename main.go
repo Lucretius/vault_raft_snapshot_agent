@@ -83,6 +83,7 @@ func main() {
 		} else {
 
 			func() {
+				log.Println("Starting backup.")
 				snapshot, err := os.CreateTemp("", "snapshot")
 
 				if err != nil {
@@ -93,6 +94,7 @@ func main() {
 
 				ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
 				defer cancel()
+
 				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
 				if err != nil {
 					log.Fatalln("Unable to generate snapshot", err.Error())
@@ -120,6 +122,7 @@ func main() {
 					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
 					logSnapshotError("azure", snapshotPath, err)
 				}
+				log.Println("Backup completed.")
 			}()
 		}
 		select {
