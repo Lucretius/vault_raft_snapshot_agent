@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -95,6 +96,11 @@ func main() {
 				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
 				if err != nil {
 					log.Fatalln("Unable to generate snapshot", err.Error())
+				}
+
+				_, err = snapshot.Seek(0, io.SeekStart)
+				if err != nil {
+					log.Fatalln("Unable to seek to start of snapshot file", err.Error())
 				}
 
 				now := time.Now().UnixNano()
