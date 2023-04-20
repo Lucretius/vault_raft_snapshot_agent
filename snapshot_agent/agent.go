@@ -2,6 +2,7 @@ package snapshot_agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -74,10 +75,35 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		return err
 	}
 	s.API = api
-	if config.VaultAuthMethod == "k8s" {
+
+	switch config.VaultAuthMethod {
+	case "k8s":
 		return s.SetClientTokenFromK8sAuth(config)
+	case "token":
+		return s.SetClientToken(config)
+	default:
+		return s.SetClientTokenFromAppRole(config)
 	}
-	return s.SetClientTokenFromAppRole(config)
+}
+
+func (s *Snapshotter) SetClientToken(config *config.Configuration) error {
+	s.API.SetToken(config.Token)
+
+	tokenInfo, err := s.API.Auth().Token().LookupSelf()
+
+	if err != nil {
+		s.API.ClearToken()
+		return fmt.Errorf("error looking up provided token: %s", err)
+	}
+
+	ttl, err := tokenInfo.Data["ttl"].(json.Number).Int64()
+	if err != nil {
+		s.API.ClearToken()
+		return fmt.Errorf("error converting ttl to int: %s", err)
+	}
+
+	s.TokenExpiration = time.Now().Add((time.Second * time.Duration(ttl)) / 2)
+	return nil
 }
 
 func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) error {

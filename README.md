@@ -70,16 +70,22 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `approle` Specifies the approle name used to login.  Defaults to "approle".
 
-
 ### Kubernetes authentication mode
 Incase we're running the application under kubernetes, we can use Vault's Kubernetes Auth
 as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/auth/kubernetes)
 
 `vault_auth_method` Set it to "k8s", otherwise, approle will be chosen
 
-`vault_auth_role` Specifies vault k8s auth role
+`k8s_auth_role` Specifies vault k8s auth role
 
-`vault_auth_path` Specifies vault k8s auth path
+`k8s_auth_path` Specifies vault k8s auth path
+
+### Token authentication mode
+Authenticates with vault using a supplied token.
+
+`vault_auth_method` Set it to "token", otherwise, approle will be chosen
+
+`token` Specifies the vault token
 
 ### Storage options
 

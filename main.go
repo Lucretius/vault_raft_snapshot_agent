@@ -64,6 +64,8 @@ func main() {
 					log.Fatalln("Unable to get token from k8s auth")
 					return
 				}
+			case "token":
+				// Do nothing as vault agent will auto-renew the token
 			default:
 				err := snapshotter.SetClientTokenFromAppRole(c)
 				if err != nil {

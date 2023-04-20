@@ -20,7 +20,8 @@ type Configuration struct {
 	Azure           AzureConfig `json:"azure_storage"`
 	RoleID          string      `json:"role_id"`
 	SecretID        string      `json:"secret_id"`
-	Approle         string      `json:"approle"`
+	Token           string      `json:"token,omitempty"`
+	Approle         string      `json:"approle,omitempty"`
 	K8sAuthRole     string      `json:"k8s_auth_role,omitempty"`
 	K8sAuthPath     string      `json:"k8s_auth_path,omitempty"`
 	VaultAuthMethod string      `json:"vault_auth_method,omitempty"`
