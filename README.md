@@ -117,7 +117,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 `s3_bucket` - bucket to store snapshots in (required for AWS writes to work)
 
-`s3_key_prefix` - Prefix to store s3 snapshots in.  Defaults to `raft_snapshots`
+`s3_key_prefix` - Prefix to store s3 snapshots in.  Defaults to nothing.
 
 `s3_server_side_encryption` -  Encryption is **off** by default.  Set to true to turn on AWS' AES256 encryption.  Support for AWS KMS keys is not currently supported.
 

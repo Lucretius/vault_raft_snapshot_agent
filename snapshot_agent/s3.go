@@ -15,14 +15,14 @@ import (
 
 // CreateS3Snapshot writes snapshot to s3 location
 func (s *Snapshotter) CreateS3Snapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
-	keyPrefix := "raft_snapshots"
+	keyPrefix := ""
 	if config.AWS.KeyPrefix != "" {
-		keyPrefix = config.AWS.KeyPrefix
+		keyPrefix = fmt.Sprintf("%s/", config.AWS.KeyPrefix)
 	}
 
 	input := &s3manager.UploadInput{
 		Bucket:               &config.AWS.Bucket,
-		Key:                  aws.String(fmt.Sprintf("%s/raft_snapshot-%d.snap", keyPrefix, currentTs)),
+		Key:                  aws.String(fmt.Sprintf("%sraft_snapshot-%d.snap", keyPrefix, currentTs)),
 		Body:                 reader,
 		ServerSideEncryption: nil,
 	}
@@ -32,7 +32,7 @@ func (s *Snapshotter) CreateS3Snapshot(reader io.Reader, config *config.Configur
 	}
 
 	if config.AWS.StaticSnapshotName != "" {
-		input.Key = aws.String(fmt.Sprintf("%s/%s.snap", keyPrefix, config.AWS.StaticSnapshotName))
+		input.Key = aws.String(fmt.Sprintf("%s%s.snap", keyPrefix, config.AWS.StaticSnapshotName))
 	}
 
 	o, err := s.Uploader.Upload(input)
