@@ -1,82 +1,103 @@
 package snapshot_agent
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Lucretius/vault_raft_snapshot_agent/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// CreateS3Snapshot writes snapshot to s3 location
-func (s *Snapshotter) CreateS3Snapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
-	keyPrefix := ""
-	if config.AWS.KeyPrefix != "" {
-		keyPrefix = fmt.Sprintf("%s/", config.AWS.KeyPrefix)
-	}
+type S3Uploader struct {
+	uploader *manager.Uploader
+	s3Client *s3.Client
+	config   config.S3Config
+	retain   int64
+}
 
-	input := &s3manager.UploadInput{
-		Bucket:               &config.AWS.Bucket,
-		Key:                  aws.String(fmt.Sprintf("%sraft_snapshot-%d.snap", keyPrefix, currentTs)),
-		Body:                 reader,
-		ServerSideEncryption: nil,
-	}
+func NewS3Uploader(config *config.Configuration) (*S3Uploader, error) {
 
-	if config.AWS.SSE == true {
-		input.ServerSideEncryption = aws.String("AES256")
-	}
+	s3Config, err := awsConfig.LoadDefaultConfig(context.Background(),
+		awsConfig.WithRegion(config.AWS.Region),
+	)
 
-	if config.AWS.StaticSnapshotName != "" {
-		input.Key = aws.String(fmt.Sprintf("%s%s.snap", keyPrefix, config.AWS.StaticSnapshotName))
-	}
-
-	o, err := s.Uploader.Upload(input)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to load default aws config: %w", err)
+	}
+
+	if config.AWS.AccessKeyID != "" && config.AWS.SecretAccessKey != "" {
+		creds := credentials.NewStaticCredentialsProvider(config.AWS.AccessKeyID, config.AWS.SecretAccessKey, "")
+		s3Config.Credentials = creds
+	}
+
+	if config.AWS.Endpoint != "" {
+		s3Config.EndpointResolverWithOptions = aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL: config.AWS.Endpoint,
+			}, nil
+		})
+	}
+
+	s3Client := s3.NewFromConfig(s3Config, func(o *s3.Options) {
+		o.UsePathStyle = config.AWS.S3ForcePathStyle
+	})
+
+	s3Uploader := &S3Uploader{
+		s3Client: s3Client,
+		uploader: manager.NewUploader(s3Client),
+		config:   config.AWS,
+		retain:   config.Retain,
+	}
+
+	return s3Uploader, nil
+}
+
+func (u *S3Uploader) Upload(ctx context.Context, reader io.Reader, currentTs int64) (string, error) {
+	keyPrefix := u.keyPrefix()
+
+	input := &s3.PutObjectInput{
+		Bucket: &u.config.Bucket,
+		Key:    aws.String(fmt.Sprintf("%sraft_snapshot-%d.snap", keyPrefix, currentTs)),
+		Body:   reader,
+	}
+
+	if u.config.SSE == true {
+		input.ServerSideEncryption = s3Types.ServerSideEncryptionAes256
+	}
+
+	o, err := u.uploader.Upload(ctx, input)
+	if err != nil {
+		return "", fmt.Errorf("error uploading snapshot: %w", err)
 	} else {
-		if config.Retain > 0 && config.AWS.StaticSnapshotName == "" {
-			existingSnapshotList, err := s.S3Client.ListObjects(&s3.ListObjectsInput{
-				Bucket: &config.AWS.Bucket,
-				Prefix: aws.String(keyPrefix),
-			})
+		if u.retain > 0 {
+
+			existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, keyPrefix)
+
 			if err != nil {
-				log.Println("Error when retrieving existing snapshots for delete action.")
-				return o.Location, err
-			}
-			existingSnapshots := make([]s3.Object, 0)
-
-			for _, obj := range existingSnapshotList.Contents {
-				if strings.HasSuffix(*obj.Key, ".snap") && strings.Contains(*obj.Key, "raft_snapshot-") {
-					existingSnapshots = append(existingSnapshots, *obj)
-				}
+				return "", fmt.Errorf("error getting existing snapshots: %w", err)
 			}
 
-			if len(existingSnapshots) <= int(config.Retain) {
+			if len(existingSnapshots)-int(u.retain) <= 0 {
 				return o.Location, nil
 			}
-
-			timestamp := func(o1, o2 *s3.Object) bool {
-				return o1.LastModified.Before(*o2.LastModified)
-			}
-			S3By(timestamp).Sort(existingSnapshots)
-			if len(existingSnapshots)-int(config.Retain) <= 0 {
-				return o.Location, nil
-			}
-			snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(config.Retain)]
+			snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(u.retain)]
 
 			for i := range snapshotsToDelete {
-				_, err := s.S3Client.DeleteObject(&s3.DeleteObjectInput{
-					Bucket: &config.AWS.Bucket,
+				_, err := u.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+					Bucket: &u.config.Bucket,
 					Key:    snapshotsToDelete[i].Key,
 				})
 				if err != nil {
-					log.Printf("Error when deleting snapshot %s\n.", *snapshotsToDelete[i].Key)
-					return o.Location, err
+					return "", fmt.Errorf("error deleting snapshot %s: %w", *snapshotsToDelete[i].Key, err)
 				}
 			}
 		}
@@ -84,10 +105,65 @@ func (s *Snapshotter) CreateS3Snapshot(reader io.Reader, config *config.Configur
 	}
 }
 
-// implementation of Sort interface for s3 objects
-type S3By func(f1, f2 *s3.Object) bool
+func (u *S3Uploader) LastSuccessfulUpload(ctx context.Context) (time.Time, error) {
+	keyPrefix := u.keyPrefix()
 
-func (by S3By) Sort(objects []s3.Object) {
+	existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, keyPrefix)
+
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error getting existing snapshots: %w", err)
+	}
+
+	if len(existingSnapshots) == 0 {
+		return time.Time{}, nil
+	}
+
+	lastSnapshot := existingSnapshots[len(existingSnapshots)-1]
+
+	return *lastSnapshot.LastModified, nil
+}
+
+func (u *S3Uploader) keyPrefix() string {
+	keyPrefix := ""
+	if u.config.KeyPrefix != "" {
+		keyPrefix = fmt.Sprintf("%s/", u.config.KeyPrefix)
+	}
+
+	return keyPrefix
+}
+
+func (u *S3Uploader) listUploadedSnapshotsAscending(ctx context.Context, keyPrefix string) ([]s3Types.Object, error) {
+
+	var result []s3Types.Object
+
+	existingSnapshotList, err := u.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: &u.config.Bucket,
+		Prefix: aws.String(keyPrefix),
+	})
+
+	if err != nil {
+		return result, fmt.Errorf("error listing uploaded snapshots: %w", err)
+	}
+
+	for _, obj := range existingSnapshotList.Contents {
+		if strings.HasSuffix(*obj.Key, ".snap") && strings.Contains(*obj.Key, "raft_snapshot-") {
+			result = append(result, obj)
+		}
+	}
+
+	timestamp := func(o1, o2 *s3Types.Object) bool {
+		return o1.LastModified.Before(*o2.LastModified)
+	}
+
+	S3By(timestamp).Sort(result)
+
+	return result, nil
+}
+
+// implementation of Sort interface for s3 objects
+type S3By func(f1, f2 *s3Types.Object) bool
+
+func (by S3By) Sort(objects []s3Types.Object) {
 	fs := &s3ObjectSorter{
 		objects: objects,
 		by:      by, // The Sort method's receiver is the function (closure) that defines the sort order.
@@ -96,8 +172,8 @@ func (by S3By) Sort(objects []s3.Object) {
 }
 
 type s3ObjectSorter struct {
-	objects []s3.Object
-	by      func(f1, f2 *s3.Object) bool // Closure used in the Less method.
+	objects []s3Types.Object
+	by      func(f1, f2 *s3Types.Object) bool // Closure used in the Less method.
 }
 
 func (s *s3ObjectSorter) Len() int {

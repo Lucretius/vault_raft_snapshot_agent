@@ -39,10 +39,14 @@ func main() {
 	if err != nil {
 		log.Fatalln("Cannot instantiate snapshotter.", err)
 	}
-	frequency, err := time.ParseDuration(c.Frequency)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	configuredFrequency, err := time.ParseDuration(c.Frequency)
 
 	if err != nil {
-		frequency = time.Hour
+		configuredFrequency = time.Hour
 	}
 
 	snapshotTimeout := 60 * time.Second
@@ -55,7 +59,11 @@ func main() {
 		}
 	}
 
+	var lastSuccessfulUploads snapshot_agent.LastUpload
+
 	for {
+		frequency := configuredFrequency
+
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			switch c.VaultAuthMethod {
 			case "k8s":
@@ -83,49 +91,17 @@ func main() {
 		if !leaderIsSelf {
 			log.Println("Not running on leader node, skipping.")
 		} else {
-
-			func() {
-				log.Println("Starting backup.")
-				snapshot, err := os.CreateTemp("", "snapshot")
+			if lastSuccessfulUploads == nil {
+				lastSuccessfulUploads, err = snapshotter.GetLastSuccessfulUploads(ctx)
 
 				if err != nil {
-					log.Fatalln("Unable to create temporary snapshot file", err.Error())
+					log.Fatalln("Unable to get last successful uploads", err)
 				}
 
-				defer os.Remove(snapshot.Name())
-
-				ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
-				defer cancel()
-
-				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
-				if err != nil {
-					log.Fatalln("Unable to generate snapshot", err.Error())
-				}
-
-				_, err = snapshot.Seek(0, io.SeekStart)
-				if err != nil {
-					log.Fatalln("Unable to seek to start of snapshot file", err.Error())
-				}
-
-				now := time.Now().UnixNano()
-				if c.Local.Path != "" {
-					snapshotPath, err := snapshotter.CreateLocalSnapshot(snapshot, c, now)
-					logSnapshotError("local", snapshotPath, err)
-				}
-				if c.AWS.Bucket != "" {
-					snapshotPath, err := snapshotter.CreateS3Snapshot(snapshot, c, now)
-					logSnapshotError("aws", snapshotPath, err)
-				}
-				if c.GCP.Bucket != "" {
-					snapshotPath, err := snapshotter.CreateGCPSnapshot(snapshot, c, now)
-					logSnapshotError("gcp", snapshotPath, err)
-				}
-				if c.Azure.ContainerName != "" {
-					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
-					logSnapshotError("azure", snapshotPath, err)
-				}
-				log.Println("Backup completed.")
-			}()
+				frequency = lastSuccessfulUploads.NextBackupIn(configuredFrequency)
+			} else {
+				runBackup(ctx, snapshotter, snapshotTimeout)
+			}
 		}
 		select {
 		case <-time.After(frequency):
@@ -136,10 +112,43 @@ func main() {
 	}
 }
 
-func logSnapshotError(dest, snapshotPath string, err error) {
+func runBackup(ctx context.Context, snapshotter *snapshot_agent.Snapshotter, snapshotTimeout time.Duration) {
+	log.Println("Starting backup.")
+	snapshot, err := os.CreateTemp("", "snapshot")
+
 	if err != nil {
-		log.Printf("Failed to generate %s snapshot to %s: %v\n", dest, snapshotPath, err)
-	} else {
-		log.Printf("Successfully created %s snapshot to %s\n", dest, snapshotPath)
+		log.Printf("Unable to create temporary snapshot file: %s\n", err)
 	}
+
+	defer os.Remove(snapshot.Name())
+
+	ctx, cancel := context.WithTimeout(ctx, snapshotTimeout)
+	defer cancel()
+
+	err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
+	if err != nil {
+		log.Printf("Unable to generate snapshot: %s\n", err)
+	}
+
+	_, err = snapshot.Seek(0, io.SeekStart)
+	if err != nil {
+		log.Printf("Unable to seek to start of snapshot file: %s\n", err)
+	}
+
+	now := time.Now().UnixNano()
+
+	snapshotter.Lock()
+	defer snapshotter.Unlock()
+
+	for uploaderType, uploader := range snapshotter.Uploaders {
+		snapshotPath, err := uploader.Upload(ctx, snapshot, now)
+
+		if err != nil {
+			log.Printf("Unable to upload %s snapshot (%s): %s\n", uploaderType, snapshotPath, err)
+		}
+
+		log.Printf("Successfully uploaded %s snapshot (%s)\n", uploaderType, snapshotPath)
+	}
+
+	log.Println("Backup completed.")
 }

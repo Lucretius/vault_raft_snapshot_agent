@@ -2,64 +2,143 @@ package snapshot_agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
+	"os"
 	"sort"
+	"time"
 
-	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 )
 
-// CreateAzureSnapshot writes snapshot to azure blob storage
-func (s *Snapshotter) CreateAzureSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
-	ctx := context.Background()
-	url := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
-	blob := s.AzureUploader.NewBlockBlobURL(url)
-	_, err := azblob.UploadStreamToBlockBlob(ctx, reader, blob, azblob.UploadStreamToBlockBlobOptions{
-		BufferSize: 4 * 1024 * 1024,
-		MaxBuffers: 16,
-	})
+type AzureUploader struct {
+	azureUploader *azblob.Client
+	config        config.AzureConfig
+	retain        int64
+}
+
+func NewAzureUploader(config *config.Configuration) (*AzureUploader, error) {
+	accountName := config.Azure.AccountName
+	if os.Getenv("AZURE_STORAGE_ACCOUNT") != "" {
+		accountName = os.Getenv("AZURE_STORAGE_ACCOUNT")
+	}
+	accountKey := config.Azure.AccountKey
+	if os.Getenv("AZURE_STORAGE_ACCESS_KEY") != "" {
+		accountKey = os.Getenv("AZURE_STORAGE_ACCESS_KEY")
+	}
+	if len(accountName) == 0 || len(accountKey) == 0 {
+		return nil, errors.New("invalid Azure configuration")
+	}
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("invalid credentials with error: %w", err)
+	}
+
+	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", accountName)
+
+	client, err := azblob.NewClientWithSharedKeyCredential(serviceURL, credential, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure client: %w", err)
+	}
+
+	return &AzureUploader{
+		azureUploader: client,
+		config:        config.Azure,
+		retain:        config.Retain,
+	}, nil
+}
+
+func (u *AzureUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64) (string, error) {
+
+	name := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
+
+	_, err := u.azureUploader.UploadStream(ctx, u.config.ContainerName, name, reader, &azblob.UploadStreamOptions{
+		BlockSize:   4 * 1024 * 1024,
+		Concurrency: 16,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("error uploading snapshot: %w", err)
 	} else {
-		if config.Retain > 0 {
-			deleteCtx := context.Background()
-			res, err := s.AzureUploader.ListBlobsFlatSegment(deleteCtx, azblob.Marker{}, azblob.ListBlobsSegmentOptions{
-				Prefix:     "raft_snapshot-",
-				MaxResults: 500,
-			})
+		if u.retain > 0 {
+			existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, "raft_snapshot-")
+
 			if err != nil {
-				log.Println("Unable to iterate through bucket to find old snapshots to delete")
-				return url, err
+				return "", fmt.Errorf("error getting existing snapshots: %w", err)
 			}
-			blobs := res.Segment.BlobItems
-			timestamp := func(o1, o2 *azblob.BlobItemInternal) bool {
-				return o1.Properties.LastModified.Before(o2.Properties.LastModified)
+
+			if len(existingSnapshots)-int(u.retain) <= 0 {
+				return name, nil
 			}
-			AzureBy(timestamp).Sort(blobs)
-			if len(blobs)-int(config.Retain) <= 0 {
-				return url, nil
-			}
-			blobsToDelete := blobs[0 : len(blobs)-int(config.Retain)]
+
+			blobsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(u.retain)]
 
 			for _, b := range blobsToDelete {
-				val := s.AzureUploader.NewBlockBlobURL(b.Name)
-				_, err := val.Delete(deleteCtx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+				_, err := u.azureUploader.DeleteBlob(ctx, u.config.ContainerName, *b.Name, nil)
 				if err != nil {
-					log.Println("Cannot delete old snapshot")
-					return url, err
+					return "", fmt.Errorf("error deleting snapshot %s: %w", *b.Name, err)
 				}
 			}
 		}
-		return url, nil
+		return name, nil
 	}
 }
 
-// implementation of Sort interface for s3 objects
-type AzureBy func(f1, f2 *azblob.BlobItemInternal) bool
+func (u *AzureUploader) LastSuccessfulUpload(ctx context.Context) (time.Time, error) {
 
-func (by AzureBy) Sort(objects []azblob.BlobItemInternal) {
+	existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, "raft_snapshot-")
+
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error getting existing snapshots: %w", err)
+	}
+
+	if len(existingSnapshots) == 0 {
+		return time.Time{}, nil
+	}
+
+	lastSnapshot := existingSnapshots[len(existingSnapshots)-1]
+
+	return *lastSnapshot.Properties.LastModified, nil
+}
+
+func (u *AzureUploader) listUploadedSnapshotsAscending(ctx context.Context, keyPrefix string) ([]*container.BlobItem, error) {
+
+	var results []*container.BlobItem
+
+	var maxResults int32 = 500
+
+	pager := u.azureUploader.NewListBlobsFlatPager(u.config.ContainerName, &azblob.ListBlobsFlatOptions{
+		Prefix:     &keyPrefix,
+		MaxResults: &maxResults,
+	})
+
+	for pager.More() {
+		resp, err := pager.NextPage(ctx)
+
+		if err != nil {
+			return results, fmt.Errorf("error paging blobs: %w", err)
+		}
+
+		results = append(results, resp.Segment.BlobItems...)
+	}
+
+	timestamp := func(o1, o2 *container.BlobItem) bool {
+		return o1.Properties.LastModified.Before(*o2.Properties.LastModified)
+	}
+
+	AzureBy(timestamp).Sort(results)
+
+	return results, nil
+}
+
+// implementation of Sort interface for s3 objects
+type AzureBy func(f1, f2 *container.BlobItem) bool
+
+func (by AzureBy) Sort(objects []*container.BlobItem) {
 	fs := &azObjectSorter{
 		objects: objects,
 		by:      by, // The Sort method's receiver is the function (closure) that defines the sort order.
@@ -68,8 +147,8 @@ func (by AzureBy) Sort(objects []azblob.BlobItemInternal) {
 }
 
 type azObjectSorter struct {
-	objects []azblob.BlobItemInternal
-	by      func(f1, f2 *azblob.BlobItemInternal) bool // Closure used in the Less method.
+	objects []*container.BlobItem
+	by      func(f1, f2 *container.BlobItem) bool // Closure used in the Less method.
 }
 
 func (s *azObjectSorter) Len() int {
@@ -77,7 +156,7 @@ func (s *azObjectSorter) Len() int {
 }
 
 func (s *azObjectSorter) Less(i, j int) bool {
-	return s.by(&s.objects[i], &s.objects[j])
+	return s.by(s.objects[i], s.objects[j])
 }
 
 func (s *azObjectSorter) Swap(i, j int) {

@@ -4,66 +4,110 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"sort"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 	"google.golang.org/api/iterator"
 )
 
-// CreateGCPSnapshot writes snapshot to google storage
-func (s *Snapshotter) CreateGCPSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
+type GCPUploader struct {
+	gcpBucket *storage.BucketHandle
+	retain    int64
+}
+
+func NewGCPUploader(config *config.Configuration) (*GCPUploader, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bucket := client.Bucket(config.GCP.Bucket)
+
+	return &GCPUploader{gcpBucket: bucket}, nil
+}
+
+func (u *GCPUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
-	obj := s.GCPBucket.Object(fileName)
+	obj := u.gcpBucket.Object(fileName)
 	w := obj.NewWriter(context.Background())
 
 	_, err := io.Copy(w, reader)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error writing snapshot to GCP: %w", err)
 	}
 
 	if err := w.Close(); err != nil {
-		return "", err
+		return "", fmt.Errorf("error closing GCP writer: %w", err)
 	}
 
-	if config.Retain > 0 {
-		deleteCtx := context.Background()
-		query := &storage.Query{Prefix: "raft_snapshot-"}
-		it := s.GCPBucket.Objects(deleteCtx, query)
-		var files []storage.ObjectAttrs
-		for {
-			attrs, err := it.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Println("Unable to iterate through bucket to find old snapshots to delete")
-				return fileName, err
-			}
-			files = append(files, *attrs)
+	if u.retain > 0 {
+
+		existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, "raft_snapshot-")
+
+		if err != nil {
+			return "", fmt.Errorf("error getting existing snapshots: %w", err)
 		}
 
-		timestamp := func(o1, o2 *storage.ObjectAttrs) bool {
-			return o1.Updated.Before(o2.Updated)
-		}
-
-		GCPBy(timestamp).Sort(files)
-		if len(files)-int(config.Retain) <= 0 {
+		if len(existingSnapshots)-int(u.retain) <= 0 {
 			return fileName, nil
 		}
-		snapshotsToDelete := files[0 : len(files)-int(config.Retain)]
+		snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(u.retain)]
 
 		for _, ss := range snapshotsToDelete {
-			obj := s.GCPBucket.Object(ss.Name)
-			err := obj.Delete(deleteCtx)
+			obj := u.gcpBucket.Object(ss.Name)
+			err := obj.Delete(ctx)
 			if err != nil {
-				log.Println("Cannot delete old snapshot")
-				return fileName, err
+				return "", fmt.Errorf("error deleting snapshot: %w", err)
 			}
 		}
 	}
 	return fileName, nil
+}
+
+func (u *GCPUploader) LastSuccessfulUpload(ctx context.Context) (time.Time, error) {
+	existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, "raft_snapshot-")
+
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error getting existing snapshots: %w", err)
+	}
+
+	if len(existingSnapshots) == 0 {
+		return time.Time{}, nil
+	}
+
+	lastSnapshot := existingSnapshots[len(existingSnapshots)-1]
+
+	return lastSnapshot.Updated, nil
+}
+
+func (u *GCPUploader) listUploadedSnapshotsAscending(ctx context.Context, keyPrefix string) ([]storage.ObjectAttrs, error) {
+
+	var result []storage.ObjectAttrs
+
+	query := &storage.Query{Prefix: keyPrefix}
+	it := u.gcpBucket.Objects(ctx, query)
+
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return result, fmt.Errorf("unable to iterate bucket: %w", err)
+		}
+		result = append(result, *attrs)
+	}
+
+	timestamp := func(o1, o2 *storage.ObjectAttrs) bool {
+		return o1.Updated.Before(o2.Updated)
+	}
+
+	GCPBy(timestamp).Sort(result)
+
+	return result, nil
 }
 
 // implementation of Sort interface for s3 objects

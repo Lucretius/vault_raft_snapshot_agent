@@ -5,34 +5,41 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"net/url"
+	"io"
 	"os"
 	"path"
+	"sync"
 	"time"
 
-	"cloud.google.com/go/storage"
-	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/Lucretius/vault_raft_snapshot_agent/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	vaultApi "github.com/hashicorp/vault/api"
 )
 
+type UploaderType string
+
+const (
+	S3UploaderType    UploaderType = "s3"
+	GCPUploaderType                = "gcp"
+	AzureUploaderType              = "azure"
+	LocalUploaderType              = "local"
+)
+
+type Uploader interface {
+	Upload(ctx context.Context, reader io.Reader, currentTs int64) (string, error)
+	LastSuccessfulUpload(ctx context.Context) (time.Time, error)
+}
+
 type Snapshotter struct {
-	API             *vaultApi.Client
-	Uploader        *s3manager.Uploader
-	S3Client        *s3.S3
-	GCPBucket       *storage.BucketHandle
-	AzureUploader   azblob.ContainerURL
+	API *vaultApi.Client
+	sync.Mutex
+	Uploaders       map[UploaderType]Uploader
 	TokenExpiration time.Time
 }
 
 func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
-	snapshotter := &Snapshotter{}
+	snapshotter := &Snapshotter{
+		Uploaders: map[UploaderType]Uploader{},
+	}
 	err := snapshotter.ConfigureVaultClient(config)
 	if err != nil {
 		return nil, err
@@ -51,6 +58,12 @@ func NewSnapshotter(config *config.Configuration) (*Snapshotter, error) {
 	}
 	if config.Azure.ContainerName != "" {
 		err = snapshotter.ConfigureAzure(config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if config.Local.Path != "" {
+		err = snapshotter.ConfigureLocal(config)
 		if err != nil {
 			return nil, err
 		}
@@ -151,56 +164,78 @@ func (s *Snapshotter) SetClientTokenFromK8sAuth(config *config.Configuration) er
 }
 
 func (s *Snapshotter) ConfigureS3(config *config.Configuration) error {
-	awsConfig := &aws.Config{Region: aws.String(config.AWS.Region)}
+	uploader, err := NewS3Uploader(config)
 
-	if config.AWS.AccessKeyID != "" && config.AWS.SecretAccessKey != "" {
-		awsConfig.Credentials = credentials.NewStaticCredentials(config.AWS.AccessKeyID, config.AWS.SecretAccessKey, "")
+	if err != nil {
+		return fmt.Errorf("unable to create S3 uploader: %w", err)
 	}
 
-	if config.AWS.Endpoint != "" {
-		awsConfig.Endpoint = aws.String(config.AWS.Endpoint)
-	}
+	s.Lock()
+	defer s.Unlock()
 
-	if config.AWS.S3ForcePathStyle != false {
-		awsConfig.S3ForcePathStyle = aws.Bool(config.AWS.S3ForcePathStyle)
-	}
+	s.Uploaders[S3UploaderType] = uploader
 
-	sess := session.Must(session.NewSession(awsConfig))
-	s.S3Client = s3.New(sess)
-	s.Uploader = s3manager.NewUploader(sess)
 	return nil
 }
 
 func (s *Snapshotter) ConfigureGCP(config *config.Configuration) error {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
+	uploader, err := NewGCPUploader(config)
+
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create GCP uploader: %w", err)
 	}
-	s.GCPBucket = client.Bucket(config.GCP.Bucket)
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.Uploaders[GCPUploaderType] = uploader
+
 	return nil
 }
 
 func (s *Snapshotter) ConfigureAzure(config *config.Configuration) error {
-	accountName := config.Azure.AccountName
-	if os.Getenv("AZURE_STORAGE_ACCOUNT") != "" {
-		accountName = os.Getenv("AZURE_STORAGE_ACCOUNT")
-	}
-	accountKey := config.Azure.AccountKey
-	if os.Getenv("AZURE_STORAGE_ACCESS_KEY") != "" {
-		accountKey = os.Getenv("AZURE_STORAGE_ACCESS_KEY")
-	}
-	if len(accountName) == 0 || len(accountKey) == 0 {
-		return errors.New("Invalid Azure configuration")
-	}
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		log.Fatal("Invalid credentials with error: " + err.Error())
-	}
-	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, config.Azure.ContainerName))
+	uploader, err := NewAzureUploader(config)
 
-	s.AzureUploader = azblob.NewContainerURL(*URL, p)
+	if err != nil {
+		return fmt.Errorf("unable to create Azure uploader: %w", err)
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.Uploaders[AzureUploaderType] = uploader
+
 	return nil
+}
+
+func (s *Snapshotter) ConfigureLocal(config *config.Configuration) error {
+	uploader, err := NewLocalUploader(config)
+
+	if err != nil {
+		return fmt.Errorf("unable to create local uploader: %w", err)
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.Uploaders[LocalUploaderType] = uploader
+
+	return nil
+}
+
+func (s *Snapshotter) GetLastSuccessfulUploads(ctx context.Context) (LastUpload, error) {
+	lastSuccessfulUpload := LastUpload{}
+
+	s.Lock()
+	defer s.Unlock()
+
+	for uploaderType, uploader := range s.Uploaders {
+		lastUpload, err := uploader.LastSuccessfulUpload(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get last successful upload for %s: %w", uploaderType, err)
+		}
+		lastSuccessfulUpload[uploaderType] = lastUpload
+	}
+
+	return lastSuccessfulUpload, nil
 }

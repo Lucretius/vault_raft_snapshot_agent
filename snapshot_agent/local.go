@@ -1,64 +1,109 @@
 package snapshot_agent
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 )
 
-// CreateLocalSnapshot writes snapshot to disk location
-func (s *Snapshotter) CreateLocalSnapshot(reader io.Reader, config *config.Configuration, currentTs int64) (string, error) {
-	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", config.Local.Path, currentTs)
+type LocalUploader struct {
+	config config.LocalConfig
+	retain int64
+}
+
+func NewLocalUploader(config *config.Configuration) (*LocalUploader, error) {
+	return &LocalUploader{
+		config: config.Local,
+		retain: config.Retain,
+	}, nil
+}
+
+func (u *LocalUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64) (string, error) {
+	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", u.config.Path, currentTs)
 	file, err := os.Create(fileName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating file: %w", err)
 	}
 	_, err = io.Copy(file, reader)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error writing snapshot to local storage: %w", err)
 	} else {
-		if config.Retain > 0 {
-			files, err := os.ReadDir(config.Local.Path)
-			filesToDelete := make([]os.FileInfo, 0)
-			for _, file := range files {
-				if strings.Contains(file.Name(), "raft_snapshot-") && strings.HasSuffix(file.Name(), ".snap") {
-					info, err := file.Info()
-					if err != nil {
-						return fileName, err
-					}
-					filesToDelete = append(filesToDelete, info)
-				}
-			}
+		if u.retain > 0 {
+			existingSnapshots, err := u.listUploadedSnapshotsAscending("raft_snapshot-")
+
 			if err != nil {
-				log.Println("Unable to read file directory to delete old snapshots")
-				return fileName, err
+				return "", fmt.Errorf("error getting existing snapshots: %w", err)
 			}
-			timestamp := func(f1, f2 *os.FileInfo) bool {
-				file1 := *f1
-				file2 := *f2
-				return file1.ModTime().Before(file2.ModTime())
-			}
-			By(timestamp).Sort(filesToDelete)
-			if len(filesToDelete) <= int(config.Retain) {
+
+			if len(existingSnapshots) <= int(u.retain) {
 				return fileName, nil
 			}
-			filesToDelete = filesToDelete[0 : len(filesToDelete)-int(config.Retain)]
+
+			filesToDelete := existingSnapshots[0 : len(existingSnapshots)-int(u.retain)]
+
 			for _, f := range filesToDelete {
-				err := os.Remove(fmt.Sprintf("%s/%s", config.Local.Path, f.Name()))
+				err := os.Remove(fmt.Sprintf("%s/%s", u.config.Path, f.Name()))
 				if err != nil {
-					log.Println("Cannot delete old snapshot")
-					return fileName, err
+					return "", fmt.Errorf("error deleting snapshot %s: %w", f.Name(), err)
 				}
 			}
 		}
 		return fileName, nil
 	}
+}
+
+func (u *LocalUploader) LastSuccessfulUpload(ctx context.Context) (time.Time, error) {
+	existingSnapshots, err := u.listUploadedSnapshotsAscending("raft_snapshot-")
+
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error getting existing snapshots: %w", err)
+	}
+
+	if len(existingSnapshots) == 0 {
+		return time.Time{}, nil
+	}
+
+	lastSnapshot := existingSnapshots[len(existingSnapshots)-1]
+
+	return lastSnapshot.ModTime(), nil
+}
+
+func (u *LocalUploader) listUploadedSnapshotsAscending(keyPrefix string) ([]os.FileInfo, error) {
+
+	var result []os.FileInfo
+
+	files, err := os.ReadDir(u.config.Path)
+
+	if err != nil {
+		return result, fmt.Errorf("error reading directory: %w", err)
+	}
+
+	for _, file := range files {
+		if strings.Contains(file.Name(), keyPrefix) && strings.HasSuffix(file.Name(), ".snap") {
+			info, err := file.Info()
+			if err != nil {
+				return result, fmt.Errorf("error getting file info: %w", err)
+			}
+			result = append(result, info)
+		}
+	}
+
+	timestamp := func(f1, f2 *os.FileInfo) bool {
+		file1 := *f1
+		file2 := *f2
+		return file1.ModTime().Before(file2.ModTime())
+	}
+
+	By(timestamp).Sort(result)
+
+	return result, nil
 }
 
 // implementation of Sort interface for fileInfo
