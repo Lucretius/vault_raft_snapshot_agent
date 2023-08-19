@@ -1,0 +1,32 @@
+{{- $localStorage := .Values.config.local_storage -}}
+{{- if and $localStorage.enabled (default false (dig "volume" "persistentVolumeClaim" dict $localStorage).create) -}}
+{{- $pvc := $localStorage.volume.persistentVolumeClaim -}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ template "vault-raft-snapshot-agent.fullname" . }}
+  namespace: {{ template "vault-raft-snapshot-agent.namespace" . }}
+  labels:
+    helm.sh/chart: {{ template "vault-raft-snapshot-agent.chart" . }}
+    app.kubernetes.io/name: {{ include "vault-raft-snapshot-agent.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    component: snapshot-agent
+spec:
+  {{- if $pvc.volumeName }}
+  storageClassName: ""  
+  volumeName: {{ $pvc.volumeName | quote }}
+  {{- else if $pvc.storageClassName }}
+  storageClassName: {{ $pvc.storageClassName | quote }}
+  {{- end }}
+  accessModes:
+    - {{ $pvc.accessMode | default "ReadWriteMany" }}
+  resources:
+    {{- if not (empty $pvc.resources) }}
+    {{- toYaml $pvc.resources | nindent 4 }}
+    {{- else }}
+    requests:
+      storage: "1Gi"
+    {{- end }}
+{{- end }}    

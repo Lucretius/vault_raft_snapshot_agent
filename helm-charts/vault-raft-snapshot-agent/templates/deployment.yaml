@@ -1,0 +1,63 @@
+apiVersion: "apps/v1"
+kind: Deployment
+metadata:
+  name: {{ template "vault-raft-snapshot-agent.fullname" . }}
+  namespace: {{ template "vault-raft-snapshot-agent.namespace" . }}
+  labels:
+    helm.sh/chart: {{ template "vault-raft-snapshot-agent.chart" . }}
+    app.kubernetes.io/name: {{ template "vault-raft-snapshot-agent.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    component: snapshot-agent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "vault-raft-snapshot-agent.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      component: snapshot-agent
+  replicas: 1
+  strategy:
+    type: {{ .Values.deployment.strategy.type }}
+  {{- with .Values.deployment.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: {{ template "vault-raft-snapshot-agent.chart" . }}
+        app.kubernetes.io/name: {{ include "vault-raft-snapshot-agent.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        component: snapshot-agent
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: snapshot-agent
+          {{- with .Values.deployment.image }}
+          image: {{ .repo }}:{{ .tag }}
+          imagePullPolicy: {{ .pullPolicy }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: /etc/vault.d/
+              name: config
+            {{- if .Values.config.local_storage.enabled }}
+            - mountPath: {{ .Values.config.local_storage.path }}
+              name: snapshots
+            {{- end }}
+      volumes:
+        - configMap:
+            name: {{ include "vault-raft-snapshot-agent.fullname" . }}
+          name: config
+        {{- if .Values.config.local_storage.enabled }}
+        - name: snapshots
+          {{- with .Values.config.local_storage.volume }}
+          {{- if .persistentVolumeClaim }}
+          persistentVolumeClaim:
+            claimName: {{ include "vault-raft-snapshot-agent.fullname" $ }}
+          {{- else }}
+          {{- toYaml . | nindent 10 -}}
+          {{- end }}
+          {{- end }}
+        {{- end }}

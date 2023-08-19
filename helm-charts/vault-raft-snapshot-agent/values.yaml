@@ -1,0 +1,20 @@
+deployment:
+  strategy:
+    type: "RollingUpdate"
+  image:
+    repo: ghcr.io/argelbargel/vault_raft_snapshot_agent
+    tag: v0.3.1
+    pullPolicy: IfNotPresent
+
+config:
+  addr: http://127.0.0.1:8200
+  vault_auth_method: k8s
+  k8s_auth_path: kubernetes
+  k8s_auth_role: vault-raft-snapshot-agent
+  frequency: 1h
+  retain: 72
+  local_storage:
+    enabled: true
+    path: /vault/snapshots
+    volume:
+      emptyDir: {}
