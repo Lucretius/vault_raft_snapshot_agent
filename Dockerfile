@@ -22,5 +22,7 @@ RUN go build \
 FROM alpine
 WORKDIR /
 COPY --from=builder /vault_raft_snapshot_agent .
-COPY snapshot.json /etc/vault.d/snapshot.json
+
+VOLUME /etc/vault.d/
+
 ENTRYPOINT ["/vault_raft_snapshot_agent"]
