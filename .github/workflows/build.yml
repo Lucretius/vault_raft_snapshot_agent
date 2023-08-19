@@ -2,7 +2,9 @@ on:
   workflow_dispatch:
   workflow_call:
   push:
-
+    paths-ignore:
+      - 'README.md'
+      
 name: Build
 jobs:
   compile-linux-amd64:
