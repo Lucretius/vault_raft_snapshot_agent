@@ -3,8 +3,8 @@ on:
   workflow_call:
   push:
     paths-ignore:
-      - 'README.md'
-      
+      - './README.md'
+
 name: Build
 jobs:
   compile-linux-amd64:
