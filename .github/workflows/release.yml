@@ -11,8 +11,6 @@ jobs:
     uses: ./.github/workflows/build.yml
   upload-release-assets:
     needs: [build]
-    
-    name: upload binaries
     runs-on: ubuntu-latest
     steps:
       - name: Download binaries from earlier jobs
@@ -21,15 +19,13 @@ jobs:
           name: binaries
       - name: Upload Binaries
         id: upload-release-asset-linux_amd64
-        uses: AButler/upload-release-assets@v2.0
+        uses: AButler/upload-release-assets@v2.0.2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           files: binaries/*
           release-tag: ${{ github.ref }}
 
   create-container-image:
-    name: create-container-image
-
     permissions:
       contents: read
       packages: write
