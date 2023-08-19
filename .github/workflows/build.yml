@@ -2,8 +2,6 @@ on:
   workflow_dispatch:
   workflow_call:
   push:
-    tags-ignore:        
-    - v*
 
 name: Build
 jobs:
