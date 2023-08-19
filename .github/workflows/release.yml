@@ -25,7 +25,7 @@ jobs:
           files: binaries/*
           release-tag: ${{ github.ref_name }}
 
-  create-container-image:
+  publish-container-image:
     permissions:
       contents: read
       packages: write
