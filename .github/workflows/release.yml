@@ -4,6 +4,10 @@ on:
     tags:
       - "v*"
 
+env:
+  IMAGE_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}      
+
 name: Build
 jobs:
   compile-linux-amd64:
@@ -136,3 +140,43 @@ jobs:
           asset_path: binaries/vault_raft_snapshot_agent_linux_arm
           asset_name: vault_raft_snapshot_agent_linux_arm
           asset_content_type: application/octet-stream
+
+  create-container-image:
+    name: create-container-image
+
+    permissions:
+      contents: read
+      packages: write
+
+    needs: [compile-linux-amd64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Download binaries from earlier jobs
+        uses: actions/download-artifact@v1
+        with:
+          name: binaries
+          path: container-image/binaries
+
+      - name: Login to Github Packages
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}          
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}          
+
+      - name: Build image and push to Docker Hub and GitHub Container Registry
+        uses: docker/build-push-action@v2
+        with:
+          # relative path to the place where source code with Dockerfile is located
+          context: ./container-image
+          push: ${{ github.ref == 'refs/heads/master' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
