@@ -1,145 +1,31 @@
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - "v*"
-
+  release:
+    types: [published]
 env:
   IMAGE_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}      
 
-name: Build
+name: Release
 jobs:
-  compile-linux-amd64:
-    name: release linux/amd64
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup go 1.16
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - name: compile linux amd64
-        env:
-          GOARCH: amd64
-          GOOS: linux
-        run: |
-          go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_amd64
-      - name: Upload amd64 binary
-        uses: actions/upload-artifact@v1
-        with:
-          name: binaries
-          path: vault_raft_snapshot_agent_linux_amd64
-  compile-linux-arm64:
-    name: release linux/arm64
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup go 1.16
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - name: compile arm64
-        env:
-          GOARCH: arm64
-          GOOS: linux
-        run: |
-          go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_arm64
-      - name: Upload arm64 binary
-        uses: actions/upload-artifact@v1
-        with:
-          name: binaries
-          path: vault_raft_snapshot_agent_linux_arm64
-  compile-linux-arm:
-    name: release linux/arm
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup go 1.16
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.16'
-      - name: compile arm
-        env:
-          GOARCH: arm
-          GOOS: linux
-        run: |
-          go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_arm
-      - name: Upload arm binary
-        uses: actions/upload-artifact@v1
-        with:
-          name: binaries
-          path: vault_raft_snapshot_agent_linux_arm
-  create-release:
-    needs: [compile-linux-amd64, compile-linux-arm64, compile-linux-arm]
-    name: release linux/amd64
+  build:
+    uses: ./.github/workflows/build.yml
+  upload-release-assets:
+    needs: [build]
+    
+    name: upload binaries
     runs-on: ubuntu-latest
     steps:
       - name: Download binaries from earlier jobs
         uses: actions/download-artifact@v1
         with:
           name: binaries
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-      - name: Upload Release Asset amd64
+      - name: Upload Binaries
         id: upload-release-asset-linux_amd64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: AButler/upload-release-assets@v2.0
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: binaries/vault_raft_snapshot_agent_linux_amd64
-          asset_name: vault_raft_snapshot_agent_linux_amd64
-          asset_content_type: application/octet-stream
-      - name: Upload Release Asset arm64
-        id: upload-release-asset-linux_arm64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: binaries/vault_raft_snapshot_agent_linux_arm64
-          asset_name: vault_raft_snapshot_agent_linux_arm64
-          asset_content_type: application/octet-stream
-      - name: Upload Release Asset arm
-        id: upload-release-asset-linux_arm
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: binaries/vault_raft_snapshot_agent_linux_arm
-          asset_name: vault_raft_snapshot_agent_linux_arm
-          asset_content_type: application/octet-stream
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          files: binaries/*
+          release-tag: ${{ github.ref }}
 
   create-container-image:
     name: create-container-image
@@ -148,7 +34,7 @@ jobs:
       contents: read
       packages: write
 
-    needs: [compile-linux-amd64]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -177,6 +63,6 @@ jobs:
         with:
           # relative path to the place where source code with Dockerfile is located
           context: ./container-image
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: ${{ github.event == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
