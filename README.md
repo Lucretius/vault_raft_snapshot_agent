@@ -1,4 +1,6 @@
 ![Build](https://github.com/Argelbargel/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
+![Release](https://img.shields.io/github/v/release/Argelbargel/vault_raft_snapshot_agent)
+
 
 # Raft Snapshot Agent
 
