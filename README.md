@@ -15,7 +15,13 @@ In this way, the daemon will always run on the leader Raft node.
 Another way to do this, which would allow us to run the snapshot agent anywhere, is to simply have the daemons form their own Raft cluster, but this approach seemed much more cumbersome.
 
 ## Running
+### Container-Image
+You can run the agent with the supplied container-image, e.g. via docker:
+```
+docker run -v <path to snapshot.json>:/etc/vault.d/snapshot.json" ghcr.io/argelbargel/vault_raft_snapshot_agent:latest
+```
 
+### systemd-service
 The recommended way of running this daemon is using systemctl, since it handles restarts and failure scenarios quite well.  To learn more about systemctl, checkout [this article](https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units).  begin, create the following file at `/etc/systemd/system/snapshot.service`:
 
 ```
