@@ -27,7 +27,11 @@ jobs:
           GOOS: linux
         run: |
           go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_amd64
+          go build -o vault_raft_snapshot_agent_linux_amd64 \
+          -a \
+          -trimpath \
+          -ldflags "-s -w -extldflags '-static'" \
+          -tags 'osusergo netgo static_build'
       - name: Upload amd64 binary
         uses: actions/upload-artifact@v1
         with:
@@ -53,7 +57,11 @@ jobs:
           GOOS: linux
         run: |
           go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_arm64
+          go build -o vault_raft_snapshot_agent_linux_arm64 \
+          -a \
+          -trimpath \
+          -ldflags "-s -w -extldflags '-static'" \
+          -tags 'osusergo netgo static_build'
       - name: Upload arm64 binary
         uses: actions/upload-artifact@v1
         with:
@@ -79,7 +87,11 @@ jobs:
           GOOS: linux
         run: |
           go get -v ./...
-          go build -o vault_raft_snapshot_agent_linux_arm
+          go build -o vault_raft_snapshot_agent_linux_arm \
+          -a \
+          -trimpath \
+          -ldflags "-s -w -extldflags '-static'" \
+          -tags 'osusergo netgo static_build'
       - name: Upload arm binary
         uses: actions/upload-artifact@v1
         with:
