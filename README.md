@@ -1,4 +1,4 @@
-![Build](https://github.com/Lucretius/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
+![Build](https://github.com/Argelbargel/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
 
 # Raft Snapshot Agent
 
@@ -76,9 +76,9 @@ as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/a
 
 `vault_auth_method` Set it to "k8s", otherwise, approle will be chosen
 
-`vault_auth_role` Specifies vault k8s auth role
+`k8s_auth_role` Specifies vault k8s auth role
 
-`vault_auth_path` Specifies vault k8s auth path
+`k8s_auth_path` Specifies vault k8s auth path
 
 ### Storage options
 
