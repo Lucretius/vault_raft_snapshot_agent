@@ -59,6 +59,6 @@ jobs:
         with:
           # relative path to the place where source code with Dockerfile is located
           context: ./container-image
-          push: ${{ github.event == 'release' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
