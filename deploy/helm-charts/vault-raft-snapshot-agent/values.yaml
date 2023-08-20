@@ -2,7 +2,7 @@ deployment:
   strategy:
     type: "RollingUpdate"
   image:
-    repo: ghcr.io/argelbargel/vault_raft_snapshot_agent
+    repo: ghcr.io/argelbargel/vault-raft-snapshot-agent
     tag: v0.3.1
     pullPolicy: IfNotPresent
 

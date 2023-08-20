@@ -1,5 +1,5 @@
-![Build](https://github.com/Argelbargel/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
-![Release](https://img.shields.io/github/v/release/Argelbargel/vault_raft_snapshot_agent)
+![Build](https://github.com/Argelbargel/vault-raft-snapshot-agent/workflows/Build/badge.svg?branch=master)
+![Release](https://img.shields.io/github/v/release/Argelbargel/vault-raft-snapshot-agent)
 
 
 # Raft Snapshot Agent
@@ -20,7 +20,7 @@ Another way to do this, which would allow us to run the snapshot agent anywhere,
 ### Container-Image
 You can run the agent with the supplied container-image, e.g. via docker:
 ```
-docker run -v <path to snapshot.json>:/etc/vault.d/snapshot.json" ghcr.io/argelbargel/vault_raft_snapshot_agent:latest
+docker run -v <path to snapshot.json>:/etc/vault.d/snapshot.json" ghcr.io/argelbargel/vault-raft-snapshot-agent:latest
 ```
 
 ### systemd-service
@@ -29,7 +29,7 @@ The recommended way of running this daemon is using systemctl, since it handles 
 ```
 [Unit]
 Description="An Open Source Snapshot Service for Raft"
-Documentation=https://github.com/Lucretius/vault_raft_snapshot_agent/
+Documentation=https://github.com/Argelbargel/vault-raft-snapshot-agent/
 Requires=network-online.target
 After=network-online.target
 ConditionFileNotEmpty=/etc/vault.d/snapshot.json
@@ -38,8 +38,8 @@ ConditionFileNotEmpty=/etc/vault.d/snapshot.json
 Type=simple
 User=vault
 Group=vault
-ExecStart=/usr/local/bin/vault_raft_snapshot_agent
-ExecReload=/usr/local/bin/vault_raft_snapshot_agent
+ExecStart=/usr/local/bin/vault-raft-snapshot-agent
+ExecReload=/usr/local/bin/vault-raft-snapshot-agent
 KillMode=process
 Restart=on-failure
 LimitNOFILE=65536
@@ -48,7 +48,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ```
 
-Your configuration is assumed to exist at `/etc/vault.d/snapshot.json` and the actual daemon binary at `/usr/local/bin/vault_raft_snapshot_agent`.
+Your configuration is assumed to exist at `/etc/vault.d/snapshot.json` and the actual daemon binary at `/usr/local/bin/vault-raft-snapshot-agent`.
 
 Then just run:
 

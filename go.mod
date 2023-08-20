@@ -1,4 +1,4 @@
-module github.com/Argelbargel/vault_raft_snapshot_agent
+module github.com/Argelbargel/vault-raft-snapshot-agent
 
 go 1.16
 
@@ -13,4 +13,4 @@ require (
 	google.golang.org/api v0.22.0
 )
 
-replace github.com/Argelbargel/vault_raft_snapshot_agent/internal/app/vault_raft_snapshot_agent => ./internal/app/vault_raft_snapshot_agent
+replace github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent => ./internal/app/vault_raft_snapshot_agent

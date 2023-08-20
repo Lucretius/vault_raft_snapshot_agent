@@ -8,7 +8,9 @@ POST_ACTION=${4:-}
 
 export GO111MODULE=on
 export CGO_ENABLED=0
+export GOOS=linux
 export GOARCH=${ARCH}
+
 
 ARCH_DIR=${OUT_DIR}/${ARCH}
 mkdir -p ${ARCH_DIR}
@@ -24,6 +26,8 @@ go build \
     ./...
 
 if [ "$POST_ACTION" == "run" ]; then
-    chmod +x $ARCH_DIR/vault_raft_snapshot_agent
-    $ARCH_DIR/vault_raft_snapshot_agent
+    chmod +x $ARCH_DIR/vault-raft-snapshot-agent
+    exec $ARCH_DIR/vault-raft-snapshot-agent
+elif [ -n "$POST_ACTION" ]; then
+    exec sh -c "$POST_ACTION"
 fi

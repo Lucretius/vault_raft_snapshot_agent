@@ -7,7 +7,8 @@ ENV GOOS=linux \
 
 COPY ./build/build.sh /bin/build.sh
 RUN chmod +x /bin/build.sh
-VOLUME /src
+
+VOLUME /build
 VOLUME /out
 VOLUME /etc/vault.d/
 

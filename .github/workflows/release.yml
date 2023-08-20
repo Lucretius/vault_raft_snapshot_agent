@@ -17,6 +17,12 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: binaries
+      - name: Rename Binaries
+        run: |
+          while IFS= read -r -d $'\0' binary; do
+              ARCH=$(basename (dirname ($binary)))
+              mv $binary binaries/${basename $binary}_linux_$ARCH
+          done < <(find ./binaries -type f -name vault-raft-snapshot-agent -print0)
       - name: Upload Binaries
         id: upload-release-asset-linux_amd64
         uses: AButler/upload-release-assets@v2.0.2
@@ -39,7 +45,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: binaries
-          path: container-image/binaries
+          path: build/binaries
 
       - name: Login to Github Packages
         uses: docker/login-action@v2
@@ -59,7 +65,7 @@ jobs:
         with:
           # relative path to the place where source code with Dockerfile is located
           context: ./build
-          file: ./build/Deploy.Dockerfile
+          file: ./build/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
