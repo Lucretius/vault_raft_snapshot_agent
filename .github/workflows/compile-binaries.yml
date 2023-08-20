@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
   workflow_call:
   push:
-    paths:
-    - "!deploy/**"
+    paths-ignore:
+    - "deploy/**"
   pull_request:
-    paths:
+    paths-ignore:
     - "!deploy/**"
 
 env:
@@ -40,6 +40,7 @@ jobs:
         GOOS: linux
       run: |
         mkdir ./out
+        chmod +x ./build/build.sh
         ./build/build.sh . ./out ${{ matrix.arch }}
     - name: Upload binary
       uses: actions/upload-artifact@v1
