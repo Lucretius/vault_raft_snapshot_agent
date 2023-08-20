@@ -4,11 +4,9 @@ on:
   workflow_call:
   push:
     paths:
-    - "!build/**"
     - "!deploy/**"
   pull_request:
     paths:
-    - "!build/**"
     - "!deploy/**"
 
 env:
