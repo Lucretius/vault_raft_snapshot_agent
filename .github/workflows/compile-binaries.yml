@@ -42,8 +42,9 @@ jobs:
         mkdir ./out
         chmod +x ./build/build.sh
         ./build/build.sh . ./out ${{ matrix.arch }}
+
     - name: Upload binary
       uses: actions/upload-artifact@v1
       with:
-        name: binaries/vault_raft_snapshot_agent_linux_${{matrix.arch}}
-        path: ./out/${{ matrix.arch }}/vault_raft_snapshot_agent
+        name: binaries
+        path: ./out/**/vault_raft_snapshot_agent
