@@ -3,33 +3,33 @@ on:
     types: [published]
 env:
   IMAGE_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}      
+  IMAGE_NAME: ${{ github.repository }}
 
 name: Release
 jobs:
   build:
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/compile-binaries.yml
   upload-release-assets:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - name: Download binaries from earlier jobs
-        uses: actions/download-artifact@v1
-        with:
-          name: binaries
-      - name: Rename Binaries
-        run: |
-          while IFS= read -r -d $'\0' binary; do
-              ARCH=$(basename (dirname ($binary)))
-              mv $binary binaries/${basename $binary}_linux_$ARCH
-          done < <(find ./binaries -type f -name vault-raft-snapshot-agent -print0)
-      - name: Upload Binaries
-        id: upload-release-asset-linux_amd64
-        uses: AButler/upload-release-assets@v2.0.2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          files: binaries/*
-          release-tag: ${{ github.ref_name }}
+    - name: Download binaries from earlier jobs
+      uses: actions/download-artifact@v1
+      with:
+        name: binaries
+    - name: Rename Binaries
+      run: |
+        while IFS= read -r -d $'\0' binary; do
+            ARCH=$(basename (dirname ($binary)))
+            mv $binary binaries/${basename $binary}_linux_$ARCH
+        done < <(find ./binaries -type f -name vault-raft-snapshot-agent -print0)
+    - name: Upload Binaries
+      id: upload-release-asset-linux_amd64
+      uses: AButler/upload-release-assets@v2.0.2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        files: binaries/*
+        release-tag: ${{ github.ref_name }}
 
   publish-container-image:
     permissions:
@@ -39,33 +39,33 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+    - uses: actions/checkout@master
 
-      - name: Download binaries from earlier jobs
-        uses: actions/download-artifact@v1
-        with:
-          name: binaries
-          path: build/binaries
+    - name: Download binaries from earlier jobs
+      uses: actions/download-artifact@v1
+      with:
+        name: binaries
+        path: build/binaries
 
-      - name: Login to Github Packages
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.IMAGE_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}          
+    - name: Login to Github Packages
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.IMAGE_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}          
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      with:
+        images: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build image and push to Docker Hub and GitHub Container Registry
-        uses: docker/build-push-action@v2
-        with:
-          # relative path to the place where source code with Dockerfile is located
-          context: ./build
-          file: ./build/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+    - name: Build image and push to Docker Hub and GitHub Container Registry
+      uses: docker/build-push-action@v2
+      with:
+        # relative path to the place where source code with Dockerfile is located
+        context: ./build
+        file: ./build/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
