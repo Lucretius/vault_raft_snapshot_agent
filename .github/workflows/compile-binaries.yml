@@ -44,7 +44,7 @@ jobs:
         ./build/build.sh . ./out ${{ matrix.arch }}
 
     - name: Upload binary
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: binaries
         path: ./out/**/vault_raft_snapshot_agent
