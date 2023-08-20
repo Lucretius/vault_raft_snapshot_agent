@@ -21,7 +21,7 @@ jobs:
       run: |
         while IFS= read -r -d $'\0' binary; do
             ARCH=$(basename $(dirname $binary))
-            mv $binary binaries/${basename $binary}_linux_$ARCH
+            mv $binary "./binaries/$(basename $binary)_linux_$ARCH"
         done < <(find ./binaries -type f -name vault-raft-snapshot-agent -print0)
     - name: Upload Binaries
       id: upload-release-asset-linux_amd64
