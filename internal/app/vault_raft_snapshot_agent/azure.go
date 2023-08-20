@@ -1,4 +1,4 @@
-package snapshot_agent
+package vault_raft_snapshot_agent
 
 import (
 	"context"
@@ -8,11 +8,10 @@ import (
 	"sort"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 )
 
 // CreateAzureSnapshot writes snapshot to azure blob storage
-func (s *Snapshotter) CreateAzureSnapshot(reader io.ReadWriter, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateAzureSnapshot(reader io.ReadWriter, config *Configuration, currentTs int64) (string, error) {
 	ctx := context.Background()
 	url := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
 	blob := s.AzureUploader.NewBlockBlobURL(url)

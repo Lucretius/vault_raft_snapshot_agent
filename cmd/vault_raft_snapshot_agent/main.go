@@ -8,8 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Lucretius/vault_raft_snapshot_agent/config"
-	"github.com/Lucretius/vault_raft_snapshot_agent/snapshot_agent"
+	"github.com/Argelbargel/vault_raft_snapshot_agent/internal/app/vault_raft_snapshot_agent"
 )
 
 func listenForInterruptSignals() chan bool {
@@ -28,13 +27,13 @@ func main() {
 	done := listenForInterruptSignals()
 
 	log.Println("Reading configuration...")
-	c, err := config.ReadConfig()
+	c, err := vault_raft_snapshot_agent.ReadConfig()
 
 	if err != nil {
 		log.Fatalln("Configuration could not be found")
 	}
 
-	snapshotter, err := snapshot_agent.NewSnapshotter(c)
+	snapshotter, err := vault_raft_snapshot_agent.NewSnapshotter(c)
 	if err != nil {
 		log.Fatalln("Cannot instantiate snapshotter.", err)
 	}

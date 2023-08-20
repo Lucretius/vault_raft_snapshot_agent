@@ -1,4 +1,4 @@
-package snapshot_agent
+package vault_raft_snapshot_agent
 
 import (
 	"bytes"
@@ -8,12 +8,11 @@ import (
 	"sort"
 
 	"cloud.google.com/go/storage"
-	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 	"google.golang.org/api/iterator"
 )
 
 // CreateGCPSnapshot writes snapshot to google storage
-func (s *Snapshotter) CreateGCPSnapshot(b *bytes.Buffer, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateGCPSnapshot(b *bytes.Buffer, config *Configuration, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
 	obj := s.GCPBucket.Object(fileName)
 	w := obj.NewWriter(context.Background())

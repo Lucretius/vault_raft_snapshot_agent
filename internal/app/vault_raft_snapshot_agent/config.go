@@ -1,4 +1,4 @@
-package config
+package vault_raft_snapshot_agent
 
 import (
 	"encoding/json"

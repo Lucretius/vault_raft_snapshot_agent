@@ -1,0 +1,7 @@
+{
+   "retain":72,
+   "frequency":"15s",
+   "local_storage":{
+      "path": "/snapshots"
+   }
+}

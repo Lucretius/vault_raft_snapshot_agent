@@ -1,4 +1,4 @@
-package snapshot_agent
+package vault_raft_snapshot_agent
 
 import (
 	"bytes"
@@ -8,12 +8,10 @@ import (
 	"os"
 	"sort"
 	"strings"
-
-	"github.com/Lucretius/vault_raft_snapshot_agent/config"
 )
 
 // CreateLocalSnapshot writes snapshot to disk location
-func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *config.Configuration, currentTs int64) (string, error) {
+func (s *Snapshotter) CreateLocalSnapshot(buf *bytes.Buffer, config *Configuration, currentTs int64) (string, error) {
 	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", config.Local.Path, currentTs)
 	err := ioutil.WriteFile(fileName, buf.Bytes(), 0644)
 	if err != nil {

@@ -3,7 +3,13 @@ on:
   workflow_dispatch:
   workflow_call:
   push:
+    paths:
+    - "!build/**"
+    - "!deploy/**"
   pull_request:
+    paths:
+    - "!build/**"
+    - "!deploy/**"
 
 env:
   GO_VERSION: "1.16"
@@ -15,36 +21,30 @@ jobs:
       fail-fast: true
       matrix:
         arch:
-          - amd64
-          - arm64
-          - arm
+        - amd64
+        - arm64
+        - arm
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup go 
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Compile
-        env:
-          GOARCH: ${{ matrix.arch }}
-          GOOS: linux
-        run: |
-          mkdir ./build
-          go get -v ./...
-          go build \
-          -a \
-          -trimpath \
-          -ldflags "-s -w -extldflags '-static'" \
-          -tags 'osusergo netgo static_build' \
-          -o ./build/vault_raft_snapshot_agent_linux_${{matrix.arch}}
-      - name: Upload binary
-        uses: actions/upload-artifact@v1
-        with:
-          name: binaries
-          path: ./build/vault_raft_snapshot_agent_linux_${{matrix.arch}}
+    - uses: actions/checkout@master
+    - uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Setup go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: Compile
+      env:
+        GOARCH: ${{ matrix.arch }}
+        GOOS: linux
+      run: |
+        mkdir ./out
+        ./build/build.sh . ./out ${{ matrix.arch }}
+    - name: Upload binary
+      uses: actions/upload-artifact@v1
+      with:
+        name: binaries/vault_raft_snapshot_agent_linux_${{matrix.arch}}
+        path: ./out/${{ matrix.arch }}/vault_raft_snapshot_agent
