@@ -12,7 +12,7 @@ export GOARCH=${ARCH}
 
 ARCH_DIR=${OUT_DIR}/${ARCH}
 mkdir -p ${ARCH_DIR}
-echo "Building go source in ${BUILD_DIR} to ${ARCH_DIR}..."
+echo "Building go source in $(realpath "$BUILD_DIR") to $(realpath "$ARCH_DIR")..."
 cd ${BUILD_DIR}
 go get -v ./...;
 go build \
