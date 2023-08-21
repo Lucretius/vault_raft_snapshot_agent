@@ -43,7 +43,7 @@ jobs:
       uses: helm/chart-testing-action@v2.4.0
 
     - name: Check charts for changes
-      if: github.event_name == "pull_request"
+      if: github.event_name == 'pull_request'
       id: chart-changes
       run: |
         cd $CHARTS_DIR
@@ -59,13 +59,13 @@ jobs:
         ct lint --chart-dirs . --target-branch ${{ steps.determine-target.outputs.target }}
 
     - name: Lint all charts
-      if: github.event_name != "pull_request"
+      if: github.event_name != 'pull_request'
       run: |
         cd $CHARTS_DIR
         ct lint --chart-dirs . --all
 
     - name: Create kind cluster
-      if: github.event_name != "pull_request" || steps.list-changed.outputs.changed == 'true'
+      if: github.event_name != 'pull_request' || steps.list-changed.outputs.changed == 'true'
       uses: helm/kind-action@v1.7.0
 
     - name: Install changed charts
@@ -75,6 +75,6 @@ jobs:
         ct install --chart-dirs . --target-branch ${{ github.event.repository.default_branch }}      
 
     - name: Install call charts
-      if: github.event_name != "pull_request"
+      if: github.event_name != 'pull_request'
       run: ct install --chart-dirs . --all
     
