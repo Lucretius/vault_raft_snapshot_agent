@@ -73,7 +73,7 @@ jobs:
           TARGETOS=${{ steps.platform_meta.outputs.os }}
           TARGETARCH=${{ steps.platform_meta.outputs.arch }}
         labels: ${{ steps.image_meta.outputs.labels }}
-        outputs: type=image,name=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true,annotation-index.org.opencontainers.image.description=vault-raft-snapshot-agent multi-arch-image
+        outputs: type=image,name=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
     - name: Inspect image
       run: "docker buildx imagetools inspect ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.version }}"
