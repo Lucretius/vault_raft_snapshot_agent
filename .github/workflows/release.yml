@@ -33,3 +33,38 @@ jobs:
     needs:
     - compile-binaries
     uses: ./.github/workflows/publish-container-image.yml
+
+  release-charts:
+    runs-on: ubuntu-latest
+    needs:
+    - publish-container-image
+
+    env:
+      CHARTS_DIR: ./deploy/helm-charts
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+
+    - name: Configure Git
+      run: |
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+
+    - name: Update AppVersion
+      run: |
+        while IFS= read -r -d $'\0' chart; do
+            sed -i 's/appVersion:.*/appVersion: "${{ github.ref_name }}"/' $chart
+        done < <(find "$CHARTS_DIR" -type f -name Chart.yaml -print0)
+
+    - name: Run chart-releaser
+      uses: helm/chart-releaser-action@v1.5.0
+      with:
+        charts_dir: ${{ env.CHARTS_DIR }}
+      env:
+        CR_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        CR_RELEASE_TEMPLATE: ${{ github.ref_name }}
+        CR_MAKE_RELEASE_LATEST: false
