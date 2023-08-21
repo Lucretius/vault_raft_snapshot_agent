@@ -135,6 +135,3 @@ jobs:
       run: |
         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf '${{ steps.image_ref.outputs.value }}@sha256:%s ' *)
-
-    - name: Inspect image
-      run: docker buildx imagetools inspect ${{ steps.image_ref.outputs.value }}:${{ steps.image_meta.outputs.version }}
