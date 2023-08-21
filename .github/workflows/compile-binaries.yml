@@ -9,6 +9,8 @@ on:
         type: boolean
         default: true
   push:
+    tags-ignore:
+      - "v**"
     paths-ignore:
     - "deploy/**"
   pull_request:
