@@ -1,0 +1,50 @@
+name: Lint and Test Charts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: 
+      - "**"
+    tags-ignore:
+      - "v**"
+    paths:
+      - 'charts/**'
+  pull_request:
+    branches: 
+      - "**"
+    tags-ignore:
+      - "v**"
+    paths:
+      - 'charts/**'
+
+jobs:
+  lint-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.1
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          check-latest: true
+
+      - name: Set-up chart testing
+        uses: helm/chart-testing-action@v2.4.0
+
+      - name: Check charts for changes
+        id: chart-changes
+        run: |
+          changed=$(ct list-changed --chart-dirs ./deploy/helm-charts --target-branch ${{ github.event.repository.default_branch }})
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.chart-changes.outputs.changed == 'true'
+        run: ct lint --chart-dirs ./deploy/helm-charts --target-branch ${{ github.event.repository.default_branch }}          
