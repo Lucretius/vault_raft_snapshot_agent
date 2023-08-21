@@ -3,6 +3,11 @@ name: Compile Binaries
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      upload-artifacts:
+        required: false
+        type: boolean
+        default: true
   push:
     paths-ignore:
     - "deploy/**"
@@ -41,7 +46,7 @@ jobs:
         ./build/build.sh . ./dist ${{ github.ref_name }} ${{ matrix.platform }}
 
     - name: Upload binary
-      if: github.event_name == 'workflow_call'
+      if: inputs.upload-artifacts
       uses: actions/upload-artifact@v3
       with:
         name: binaries
