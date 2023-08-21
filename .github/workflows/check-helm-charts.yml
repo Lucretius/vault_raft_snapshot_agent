@@ -1,4 +1,4 @@
-name: Lint and Test Charts
+name: Lint andt test Charts
 
 on:
   workflow_dispatch:
@@ -46,6 +46,14 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Run chart-testing (lint)
-      if: github.event_name == 'workflow_dispatch' || steps.chart-changes.outputs.changed == 'true'
-      run: ct lint --chart-dirs ./deploy/helm-charts --target-branch ${{ github.event.repository.default_branch }}
+    - name: Lint changed charts
+      if: steps.chart-changes.outputs.changed == 'true'
+      run: |
+        cd ./deploy/helm-charts \
+        ct lint --chart-dirs . --target-branch ${{ github.event.repository.default_branch }}
+
+    - name: Lint all charts
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        cd ./deploy/helm-charts
+        ct lint --chart-dirs . --all
