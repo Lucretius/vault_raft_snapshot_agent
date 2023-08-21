@@ -39,17 +39,8 @@ jobs:
     - name: Set-up chart testing
       uses: helm/chart-testing-action@v2.4.0
 
-    - name: Determine Target
-      id: determine-target
-      run: |
-        if [ "${{ github.event_name}}" == "pull_request" ]; then
-          echo "target=${{ github.event.repository.default_branch }}" >> "$GITHUB_OUTPUT"
-        elif [ "${{ github.event_name}}" == "push" ] && [ "${{ github.event.base_ref }}" != "null" ]; then
-          echo "target=${{ github.event.base_ref }}" >> "$GITHUB_OUTPUT"
-        fi
-
     - name: Check charts for changes
-      if: steps.determine-target.outputs.target != null
+      if: github.event_name == "pull_request"
       id: chart-changes
       run: |
         cd ./deploy/helm-charts
@@ -65,7 +56,7 @@ jobs:
         ct lint --chart-dirs . --target-branch ${{ steps.determine-target.outputs.target }}
 
     - name: Lint all charts
-      if: steps.determine-target.outputs.target == null
+      if: github.event_name != "pull_request"
       run: |
         cd ./deploy/helm-charts
         ct lint --chart-dirs . --all
