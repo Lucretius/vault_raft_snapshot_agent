@@ -41,7 +41,7 @@ jobs:
         ./build/build.sh . ./dist ${{ github.ref_name }} ${{ matrix.platform }}
 
     - name: Upload binary
-      if: github.event_name == "workflow_call"
+      if: github.event_name == 'workflow_call'
       uses: actions/upload-artifact@v3
       with:
         name: binaries
