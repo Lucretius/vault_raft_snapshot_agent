@@ -15,10 +15,15 @@ on:
     - "v**"
     paths-ignore:
     - "deploy/**"
+    - "build/*Dockerfile"
     - ".github/workflows/*-helm-charts.yml"
+    - ".github/workflows/release*.yml"
   pull_request:
     paths-ignore:
     - "deploy/**"
+    - "build/*Dockerfile"
+    - ".github/workflows/*-helm-charts.yml"
+    - ".github/workflows/release*.yml"
 
 env:
   ARTIFACT_RETENTION_DAYS: 1
