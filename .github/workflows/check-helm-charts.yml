@@ -9,6 +9,7 @@ on:
     - "v**"
     paths:
     - 'deploy/helm-charts/**'
+    - '.github/workflows/check-helm-charts.yml'
   pull_request:
     branches:
     - "**"
@@ -16,6 +17,7 @@ on:
     - "v**"
     paths:
     - 'deploy/helm-charts/**'
+    - '.github/workflows/check-helm-charts.yml'
 
 jobs:
   lint-charts:
