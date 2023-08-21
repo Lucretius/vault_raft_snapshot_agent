@@ -1,0 +1,14 @@
+name: Compile Binaries & Publish Container Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compile-binaries:
+    uses: ./.github/workflows/compile-binaries.yml
+
+  publish-container-image:
+    uses: ./.github/workflows/publish-container-image.yml
+    needs:
+    - compile-binaries
+

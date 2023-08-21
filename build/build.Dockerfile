@@ -6,7 +6,7 @@ COPY ./build/build.sh /bin/build.sh
 RUN chmod +x /bin/build.sh
 
 VOLUME /build
-VOLUME /out
+VOLUME /dist
 VOLUME /etc/vault.d/
 
-ENTRYPOINT ["/bin/build.sh", "/build", "/out"]
+ENTRYPOINT ["/bin/build.sh", "/build", "/dist"]

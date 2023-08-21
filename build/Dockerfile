@@ -1,7 +1,8 @@
 FROM alpine
 WORKDIR /
 
-COPY ./binaries/$TARGETPLATFORM/vault-raft-snapshot-agent /bin/vault-raft-snapshot-agent
+ARG binary
+COPY $binary /bin/vault-raft-snapshot-agent
 RUN chmod +x /bin/vault-raft-snapshot-agent
 
 VOLUME /etc/vault.d/
