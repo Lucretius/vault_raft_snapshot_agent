@@ -60,5 +60,5 @@ jobs:
         platforms: ${{ matrix.platform }}
         tags: ${{ steps.image_meta.outputs.tags }}
         labels: ${{ steps.image_meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},annotation-index.org.opencontainers.image.description=vault-raft-snapshot-agent multi-arch-image
+        outputs: type=image,name=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }},annotation-index.org.opencontainers.image.description=vault-raft-snapshot-agent multi-arch-image
 
