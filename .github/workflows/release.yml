@@ -15,7 +15,7 @@ jobs:
 
     steps:
     - name: Download binaries from earlier jobs
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: binaries
 
@@ -28,4 +28,5 @@ jobs:
         release-tag: ${{ github.ref_name }}
 
   publish-container-image:
+    needs: [build]
     uses: ./.github/workflows/publish-container-image.yml
