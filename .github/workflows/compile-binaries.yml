@@ -10,38 +10,47 @@ on:
     - "!deploy/**"
 
 env:
+  ARTIFACT_RETENTION_DAYS: 1
   GO_VERSION: "1.16"
 
 jobs:
   compile-and-upload:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: true
       matrix:
-        arch:
-        - amd64
-        - arm64
-        - arm
+        platform:
+        - linux/amd64
+        - linux/arm64
+        - linux/arm
+
     steps:
-    - uses: actions/checkout@master
-    - uses: actions/cache@v1
+    - name: "Checkout repository"
+      uses: actions/checkout@master
+
+    - name: Cache dependencies
+      uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+
     - name: Setup go
       uses: actions/setup-go@v2
       with:
         go-version: ${{ env.GO_VERSION }}
-    - name: Compile
+
+    - name: Compile binary
       run: |
         mkdir ./out
         chmod +x ./build/build.sh
-        ./build/build.sh . ./out ${{ matrix.arch }}
+        ./build/build.sh . ./out ${{ matrix.platform }}
 
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
         name: binaries
         path: ./out/**/vault-raft-snapshot-agent
+        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}

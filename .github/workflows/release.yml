@@ -9,6 +9,7 @@ name: Release
 jobs:
   build:
     uses: ./.github/workflows/compile-binaries.yml
+
   upload-release-assets:
     needs: [build]
     runs-on: ubuntu-latest
@@ -20,8 +21,11 @@ jobs:
     - name: Rename Binaries
       run: |
         while IFS= read -r -d $'\0' binary; do
-            ARCH=$(basename $(dirname $binary))
-            mv $binary "./binaries/$(basename $binary)_linux_$ARCH"
+            DIR=$(dirname $binary)
+            PLATFORM=${DIR#./binaries/}
+            OS=$(dirname "$PLATFORM")
+            ARCH=$(basename "$PLATFORM")
+            mv $binary "./binaries/$(basename $binary)_$OS_$ARCH"
         done < <(find ./binaries -type f -name vault-raft-snapshot-agent -print0)
     - name: Upload Binaries
       id: upload-release-asset-linux_amd64
