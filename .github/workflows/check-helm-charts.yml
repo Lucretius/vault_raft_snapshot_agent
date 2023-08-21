@@ -1,4 +1,4 @@
-name: Lint andt test Helm-Charts
+name: Lint and Test Helm-Charts
 
 on:
   workflow_dispatch:
@@ -18,19 +18,6 @@ on:
     - 'deploy/helm-charts/**'
 
 jobs:
-  determine-target:
-    runs-on: "ubuntu-latest"
-
-    steps:
-      - name: Target for Pull-Requests
-        if: github.event_name == 'pull-request'
-        run: echo "target=${{ github.event.repository.default_branch }}" >> "$GITHUB_OUTPUT"
-
-      - name: Target for Push-Requests
-        if: github.event_name == "push" && github.event.base_ref != null
-        run: echo "target=${{ github.event.base_ref }}" >> "$GITHUB_OUTPUT""
-
-
   lint-charts:
     runs-on: ubuntu-latest
     steps:
@@ -50,12 +37,21 @@ jobs:
     - name: Set-up chart testing
       uses: helm/chart-testing-action@v2.4.0
 
+    - name: Determine Target
+      id: determine-target
+      run: |
+        if [ "${{ github.event_name}}" == "pull_request" ]; then
+          echo "target=${{ github.event.repository.default_branch }}" >> "$GITHUB_OUTPUT"
+        elif [ "${{ github.event_name}}" == "push" ] && [ "${{ github.event.base_ref }}" != "null" ]; then
+          echo "target=${{ github.event.base_ref }}" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Check charts for changes
-      if: jobs.determine-target.outputs.target != null
+      if: steps.determine-target.outputs.target != null
       id: chart-changes
       run: |
         cd ./deploy/helm-charts
-        changed=$(ct list-changed --chart-dirs . --target-branch ${{ jobs.determine-target.outputs.target }})
+        changed=$(ct list-changed --chart-dirs . --target-branch ${{ steps.determine-target.outputs.target }})
         if [[ -n "$changed" ]]; then
           echo "changed=true" >> "$GITHUB_OUTPUT"
         fi
@@ -64,10 +60,10 @@ jobs:
       if: steps.chart-changes.outputs.changed
       run: |
         cd ./deploy/helm-charts
-        ct lint --chart-dirs . --target-branch ${{ jobs.determine-target.outputs.target }}
+        ct lint --chart-dirs . --target-branch ${{ steps.determine-target.outputs.target }}
 
     - name: Lint all charts
-      if: jobs.determine-target.outputs.target == null
+      if: steps.determine-target.outputs.target == null
       run: |
         cd ./deploy/helm-charts
         ct lint --chart-dirs . --all
