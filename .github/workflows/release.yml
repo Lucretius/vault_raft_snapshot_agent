@@ -20,13 +20,13 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: binaries
+        path: dist/
 
     - name: Upload Binaries
-      id: upload-release-asset-linux_amd64
       uses: AButler/upload-release-assets@v2.0.2
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        files: binaries/*
+        files: dist/*
         release-tag: ${{ github.ref_name }}
 
   publish-container-image:
