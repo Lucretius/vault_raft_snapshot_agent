@@ -44,8 +44,8 @@ jobs:
       env:
         PLATFORM: ${{ matrix.platform }}
       run: |
-        echo "os::$(dirname $PLATFORM)" >> $GITHUB_OUTPUT
-        echo "arch::$(basename $PLATFORM)" >> $GITHUB_OUTPUT
+        echo "os=$(dirname $PLATFORM)" >> $GITHUB_OUTPUT
+        echo "arch=$(basename $PLATFORM)" >> $GITHUB_OUTPUT
 
     - name: Login to Github Packages
       uses: docker/login-action@v2
@@ -66,6 +66,7 @@ jobs:
         context: ./build
         file: ./build/Dockerfile
         platforms: ${{ matrix.platform }}
+        provenance: false
         build-args: |
           DIST_DIR=./dist
           TARGETOS=${{ steps.platform_meta.outputs.os }}
@@ -75,6 +76,4 @@ jobs:
         outputs: type=image,name=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }},annotation-index.org.opencontainers.image.description=vault-raft-snapshot-agent multi-arch-image
 
     - name: Inspect image
-      run: |
-        docker buildx imagetools inspect ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.version }}    
-
+      run: "docker buildx imagetools inspect ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.version }}    \n  #magic___^_^___line\n"
