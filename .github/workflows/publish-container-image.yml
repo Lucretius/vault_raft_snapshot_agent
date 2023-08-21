@@ -56,8 +56,7 @@ jobs:
       with:
         context: ./build
         file: ./build/Dockerfile
-        platform: ${{ matrix.platform }}
-        tags: ${{ steps.meta.outputs.tags }}
+        platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
         outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
