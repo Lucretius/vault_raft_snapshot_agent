@@ -9,10 +9,12 @@ on:
         type: boolean
         default: true
   push:
+    branches:
+      - '**'  
     tags-ignore:
       - "v**"
     paths-ignore:
-    - "deploy/**"
+      - "deploy/**"
   pull_request:
     paths-ignore:
     - "deploy/**"
