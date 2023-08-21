@@ -8,7 +8,7 @@ on:
     - "deploy/**"
   pull_request:
     paths-ignore:
-    - "!deploy/**"
+    - "deploy/**"
 
 env:
   ARTIFACT_RETENTION_DAYS: 1
