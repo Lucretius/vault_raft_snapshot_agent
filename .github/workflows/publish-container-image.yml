@@ -31,7 +31,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: binaries
-        path: dist
+        path: build/dist
 
     - name: Extract metadata (tags, labels) of Image
       id: image_meta
