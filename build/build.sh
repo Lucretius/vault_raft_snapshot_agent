@@ -3,8 +3,9 @@ set -eu
 
 BUILD_DIR=${1:-./build}
 DIST_DIR=${2:-./dist}
-PLATFORM=${3:-linux/amd64}
-POST_ACTION=${4:-}
+VERSION=${3:-Development}
+PLATFORM=${4:-linux/amd64}
+POST_ACTION=${5:-}
 
 export GO111MODULE=on
 export CGO_ENABLED=0
@@ -21,7 +22,7 @@ go get -v ./...;
 go build \
     -a \
     -trimpath \
-    -ldflags "-s -w -extldflags '-static'" \
+    -ldflags "-s -w -extldflags '-static' -X 'main.Version=$VERSION'" \
     -tags 'osusergo netgo static_build' \
     -o "${PLATFORM_OUT_DIR}" \
     ./...

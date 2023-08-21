@@ -38,7 +38,7 @@ jobs:
       run: |
         mkdir ./dist
         chmod +x ./build/build.sh
-        ./build/build.sh . ./dist ${{ matrix.platform }}
+        ./build/build.sh . ./dist ${{ github.ref_name }} ${{ matrix.platform }}
 
     - name: Upload binary
       uses: actions/upload-artifact@v3

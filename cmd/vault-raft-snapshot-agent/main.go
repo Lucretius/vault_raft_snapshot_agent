@@ -11,6 +11,8 @@ import (
 	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent"
 )
 
+var Version = "development"
+
 func listenForInterruptSignals() chan bool {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -25,7 +27,7 @@ func listenForInterruptSignals() chan bool {
 
 func main() {
 	done := listenForInterruptSignals()
-
+	log.Println("Vault Raft Snapshot Agent, Version:", Version)
 	log.Println("Reading configuration...")
 	c, err := vault_raft_snapshot_agent.ReadConfig()
 
