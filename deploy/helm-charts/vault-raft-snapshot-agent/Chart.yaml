@@ -12,7 +12,7 @@ keywords:
 
 type: application
 version: 0.1.0
-appVersion: "0.4.1"
+appVersion: "v0.4.1"
 
 home: https://github.com/Argelbargel/vault-raft-snapshot-agent
 maintainers:

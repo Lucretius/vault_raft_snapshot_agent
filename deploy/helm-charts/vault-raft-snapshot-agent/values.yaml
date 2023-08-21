@@ -3,7 +3,8 @@ deployment:
     type: "RollingUpdate"
   image:
     repo: ghcr.io/argelbargel/vault-raft-snapshot-agent
-    tag: v0.4.1
+    # if empty defaults to .Chart.AppVersion
+    tag: ""
     pullPolicy: IfNotPresent
 
 config:
