@@ -34,7 +34,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - name: snapshot-agent
+        - name: {{ include "vault-raft-snapshot-agent.name" . }}
           {{- with .Values.deployment.image }}
           image: {{ .repo }}:{{ .tag | default $.Chart.AppVersion }}
           imagePullPolicy: {{ .pullPolicy }}

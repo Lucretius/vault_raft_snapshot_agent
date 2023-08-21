@@ -6,6 +6,8 @@ deployment:
     # if empty defaults to .Chart.AppVersion
     tag: ""
     pullPolicy: IfNotPresent
+  # use the default value for Kubernetes
+  revisionHistoryLimit: 0
 
 config:
   addr: http://127.0.0.1:8200
