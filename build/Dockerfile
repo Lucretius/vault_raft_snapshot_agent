@@ -8,5 +8,8 @@ ENTRYPOINT ["/bin/vault-raft-snapshot-agent"]
 VOLUME /etc/vault.d/
 WORKDIR /
 
-COPY ./binaries/vault-raft-snapshot-agent_$TARGETOS_$TARGETARCH /bin/vault-raft-snapshot-agent
+ARG DIST_DIR="./dist"
+ARG TARGETOS="linux"
+ARG TARGETARCH="amd64"
+COPY $DIST_DIR/vault-raft-snapshot-agent_$TARGETOS_$TARGETARCH /bin/vault-raft-snapshot-agent
 RUN chmod +x /bin/vault-raft-snapshot-agent
