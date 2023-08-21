@@ -65,8 +65,8 @@ jobs:
         context: ./build
         file: ./build/Dockerfile
         platforms: ${{ matrix.platform }}
-        build-args:
-          - "BINARY=./binaries/vault-raft-snapshot-agent_${{ steps.platform_meta.outputs.os }}_${{ steps.platform_meta.outputs.arch }}"
+        build-args: |
+          BINARY=./binaries/vault-raft-snapshot-agent_${{ steps.platform_meta.outputs.os }}_${{ steps.platform_meta.outputs.arch }}
         labels: ${{ steps.meta.outputs.labels }}
         outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
