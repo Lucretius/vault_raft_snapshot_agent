@@ -80,9 +80,6 @@ jobs:
         labels: ${{ steps.image_meta.outputs.labels }}
         outputs: type=image,name=${{ steps.image_ref.outputs.value }},push-by-digest=true,name-canonical=true,push=true
 
-    - name: Inspect image
-      run: "docker buildx imagetools inspect ${{ steps.image_ref.outputs.value }}:${{ steps.image_meta.outputs.version }}"
-
     - name: Export digest
       run: |
         mkdir -p /tmp/digests
@@ -135,3 +132,6 @@ jobs:
       run: |
         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf '${{ steps.image_ref.outputs.value }}@sha256:%s ' *)
+
+    - name: Inspect image
+      run: docker buildx imagetools inspect ${{ steps.image_ref.outputs.value }}:${{ steps.image_meta.outputs.version }}
