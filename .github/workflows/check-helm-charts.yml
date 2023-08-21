@@ -52,6 +52,9 @@ jobs:
         cd ./deploy/helm-charts \
         ct lint --chart-dirs . --target-branch ${{ github.event.repository.default_branch }}
 
+    - name: Debug
+      run: echo ${{github.event_name}}
+
     - name: Lint all charts
       if: github.event_name == 'workflow_dispatch'
       run: |

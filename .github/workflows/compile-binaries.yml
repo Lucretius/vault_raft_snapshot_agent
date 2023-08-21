@@ -10,11 +10,12 @@ on:
         default: true
   push:
     branches:
-      - '**'  
+    - '**'
     tags-ignore:
-      - "v**"
+    - "v**"
     paths-ignore:
-      - "deploy/**"
+    - "deploy/**"
+    - ".github/workflows/check-helm-charts.yml"
   pull_request:
     paths-ignore:
     - "deploy/**"
