@@ -1,10 +1,19 @@
 apiVersion: v2
 name: vault-raft-snapshot-agent
 description: Vault Raft Snapshot can take periodic snapshots of vault's raft database and write it to a local file or an S3 bucket
+keywords:
+- vault-raft-snapshot-agent
+- vault
+- backup
+- snapshots
+- raft
+- integrated storage
+
 
 type: application
-version: 0.3.1
-appVersion: "0.3.1"
+version: 0.1.0
+appVersion: "0.4.1"
 
-
-
+home: https://github.com/Argelbargel/vault-raft-snapshot-agent
+maintainers:
+- name: Argelbargel
