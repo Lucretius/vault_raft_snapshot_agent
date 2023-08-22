@@ -1,0 +1,27 @@
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: "of which release should the helm-charts be informed of?"
+        type: string
+        default: ${{ github.ref_name}}
+        required: true
+  workflow_call:
+    inputs:
+      release-tag:
+        type: string
+        default: ${{ github.ref_name}}
+        required: true
+
+jobs:
+  trigger-helm-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Release of Helm-Charts
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.HELM_GITHUB_TOKEN }}
+          repository: Argelbargel/vault-raft-snapshot-agent-helm
+          event-type: update-vault-raft-snapshot-agent-images
+          client-payload: '{ "release-tag": "${{ github.event.inputs.release-tag }}" }'

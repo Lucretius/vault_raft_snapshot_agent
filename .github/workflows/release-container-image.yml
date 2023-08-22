@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "v**"
+    - "v**"
 
 env:
   IMAGE_REGISTRY: ghcr.io
@@ -143,16 +143,10 @@ jobs:
     - name: Inspect image
       run: docker buildx imagetools inspect ${{ steps.image_ref.outputs.value }}:${{ steps.image_meta.outputs.version }}
 
-  trigger-helm-release:
-    runs-on: ubuntu-latest
+  release-helm-charts:
     needs:
     - publish-images
+    uses: ./.github/workflows/release-helm-charts.yml
+    with:
+      release-tag: ${{ github.ref_name }}
 
-    steps:
-      - name: Trigger Release of Helm-Charts
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.HELM_GITHUB_TOKEN }}
-          repository: Argelbargel/vault-raft-snapshot-agent-helm
-          event-type: update-vault-raft-snapshot-agent-images
-          client-payload: '{ "release_tag": "${{ github.ref_name }}" }'
