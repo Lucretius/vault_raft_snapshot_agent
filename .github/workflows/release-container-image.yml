@@ -3,10 +3,8 @@ name: Publish Container Image
 on:
   workflow_dispatch:
   push:
-    branches: 
-      - master
     tags:
-    - "v**"
+      - "v**"
 
 env:
   IMAGE_REGISTRY: ghcr.io
