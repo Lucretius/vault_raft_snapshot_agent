@@ -30,11 +30,23 @@ jobs:
     - name: "Checkout repository"
       uses: actions/checkout@master
 
-    - name: Download binaries from earlier jobs
-      uses: actions/download-artifact@v3
+    - name: Extract metadata of Platform
+      id: platform_meta
+      env:
+        PLATFORM: ${{ matrix.platform }}
+      run: |
+        echo "os=$(dirname $PLATFORM)" >> $GITHUB_OUTPUT
+        echo "arch=$(basename $PLATFORM)" >> $GITHUB_OUTPUT
+
+    - name: Download release binary
+      uses: robinraju/release-downloader@v1.8
       with:
-        name: binaries
-        path: build/dist
+        tag: ${{ github.ref_name }}
+        fileName: vault-raft-snapshot-agent_${{ steps.platform_meta.outputs.os }}_${{ steps.platform_meta.outputs.arch }}
+        out-file-path: dist
+        tarBall: false
+        zipBall: false
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Ensure valid image ref
       id: image_ref
@@ -46,14 +58,6 @@ jobs:
       uses: docker/metadata-action@v4
       with:
         images: ${{ steps.image_ref.outputs.value }}
-
-    - name: Extract metadata of Platform
-      id: platform_meta
-      env:
-        PLATFORM: ${{ matrix.platform }}
-      run: |
-        echo "os=$(dirname $PLATFORM)" >> $GITHUB_OUTPUT
-        echo "arch=$(basename $PLATFORM)" >> $GITHUB_OUTPUT
 
     - name: Login to Github Packages
       uses: docker/login-action@v2
