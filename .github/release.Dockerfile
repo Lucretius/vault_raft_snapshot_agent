@@ -11,5 +11,5 @@ WORKDIR /
 ARG DIST_DIR
 ARG TARGETOS
 ARG TARGETARCH
-COPY ${DIST_DIR}/vault-raft-snapshot-agent_${TARGET_OS}_${TARGET_ARCH} /bin/vault-raft-snapshot-agent
+COPY ${DIST_DIR}/vault-raft-snapshot-agent_${TARGETOS}_${TARGETARCH} /bin/vault-raft-snapshot-agent
 RUN chmod +x /bin/vault-raft-snapshot-agent
