@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: "Checkout repository"
-      uses: actions/checkout@master
+      uses: actions/checkout@v3
 
     - name: Extract metadata of Platform
       id: platform_meta
@@ -142,3 +142,17 @@ jobs:
 
     - name: Inspect image
       run: docker buildx imagetools inspect ${{ steps.image_ref.outputs.value }}:${{ steps.image_meta.outputs.version }}
+
+  trigger-helm-release:
+    runs-on: ubuntu-latest
+    needs:
+    - publish-images
+
+    steps:
+      - name: Trigger Release of Helm-Charts
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.HELM_GITHUB_TOKEN }}
+          repository: Argelbargel/vault-raft-snapshot-agent-helm
+          event-type: update-vault-raft-snapshot-agent-images
+          client-payload: '{ "release_tag": "${{ github.ref_name }}" }'
