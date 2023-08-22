@@ -5,13 +5,11 @@ on:
       release-tag:
         description: "of which release should the helm-charts be informed of?"
         type: string
-        default: ${{ github.ref_name}}
         required: true
   workflow_call:
     inputs:
       release-tag:
         type: string
-        default: ${{ github.ref_name}}
         required: true
 
 jobs:
