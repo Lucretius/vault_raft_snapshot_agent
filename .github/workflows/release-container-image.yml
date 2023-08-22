@@ -45,7 +45,7 @@ jobs:
       with:
         tag: ${{ github.ref_name }}
         fileName: vault-raft-snapshot-agent_${{ steps.platform_meta.outputs.os }}_${{ steps.platform_meta.outputs.arch }}
-        out-file-path: vault-raft-snapshot-agent
+        out-file-path: dist
         tarBall: false
         zipBall: false
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -81,6 +81,10 @@ jobs:
         context: .
         file: .github/release.Dockerfile
         platforms: ${{ matrix.platform }}
+        build-args: |
+          DIST_DIR=./dist
+          TARGETOS=${{ steps.platform_meta.outputs.os }}
+          TARGETARCH=${{ steps.platform_meta.outputs.arch }}
         provenance: false
         labels: ${{ steps.image_meta.outputs.labels }}
         outputs: type=image,name=${{ steps.image_ref.outputs.value }},push-by-digest=true,name-canonical=true,push=true

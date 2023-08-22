@@ -16,12 +16,14 @@ on:
     paths-ignore:
     - "deploy/**"
     - "**Dockerfile"
+    - "**README.md"
     - "build/VERSION"
     - ".github/workflows/*-helm-charts.yml"
     - ".github/workflows/release*.yml"
   pull_request:
     paths-ignore:
     - "deploy/**"
+    - "**README.md"
     - "**Dockerfile"
     - "build/VERSION"
     - ".github/workflows/*-helm-charts.yml"
