@@ -3,7 +3,6 @@ set -eu
 
 BUILD_DIR=${1:-./build}
 DIST_DIR=${2:-./dist}
-VERSION=${3:-Development}
 PLATFORM=${4:-linux/amd64}
 POST_ACTION=${5:-}
 
@@ -11,11 +10,17 @@ export GO111MODULE=on
 export CGO_ENABLED=0
 export GOOS=$(dirname "$PLATFORM")
 export GOARCH=$(basename "$PLATFORM")
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 cd ${BUILD_DIR}
 OUT_DIR="$BUILD_DIR/out"
 PLATFORM_OUT_DIR=${OUT_DIR}/${PLATFORM}
 mkdir -p ${PLATFORM_OUT_DIR}
+
+VERSION="dev"
+if [ -e "$SCRIPT_DIR/VERSION" ]; then
+    VERSION=$(cat "$SCRIPT_DIR/VERSION")
+fi
 
 echo "Building go source in $(realpath "$BUILD_DIR") for $GOOS/$GOARCH to $(realpath "$PLATFORM_OUT_DIR")..."
 go get -v ./...;

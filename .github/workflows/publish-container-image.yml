@@ -1,7 +1,10 @@
 name: Publish Container Image
 
 on:
-  workflow_call:
+  workflow_dispatch:
+  push:
+    tags:
+    - "v**"
 
 env:
   IMAGE_REGISTRY: ghcr.io
