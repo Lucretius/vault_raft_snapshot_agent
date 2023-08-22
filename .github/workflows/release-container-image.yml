@@ -76,6 +76,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         push: true
+        file: .github/release.Dockerfile
         platforms: ${{ matrix.platform }}
         provenance: false
         labels: ${{ steps.image_meta.outputs.labels }}
