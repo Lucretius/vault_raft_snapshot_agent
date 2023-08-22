@@ -16,6 +16,9 @@ jobs:
     - compile-binaries
 
     steps:
+    - name: "Checkout repository"
+      uses: actions/checkout@master
+
     - name: Download binaries from earlier jobs
       uses: actions/download-artifact@v3
       with:
