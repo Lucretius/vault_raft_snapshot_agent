@@ -10,7 +10,7 @@ jobs:
   compile-binaries:
     uses: ./.github/workflows/compile-binaries.yml
 
-  upload-release-assets:
+  create-release:
     runs-on: ubuntu-latest
     needs:
     - compile-binaries
