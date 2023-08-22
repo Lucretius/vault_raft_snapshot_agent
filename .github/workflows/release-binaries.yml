@@ -3,6 +3,8 @@ name: Release
 on:
   workflow_dispatch:
   push:
+    tags-ignore:
+      - "**"
     paths:
     - "build/VERSION"
 
