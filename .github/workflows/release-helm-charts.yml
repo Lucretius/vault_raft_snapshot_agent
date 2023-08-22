@@ -1,3 +1,4 @@
+name: Release Helm-Charts
 on:
   workflow_dispatch:
     inputs:
@@ -18,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Release of Helm-Charts
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.HELM_GITHUB_TOKEN }}
-          repository: Argelbargel/vault-raft-snapshot-agent-helm
-          event-type: update-vault-raft-snapshot-agent-images
-          client-payload: '{ "release-tag": "${{ github.event.inputs.release-tag }}" }'
+    - name: Trigger Release of Helm-Charts
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.HELM_GITHUB_TOKEN }}
+        repository: Argelbargel/vault-raft-snapshot-agent-helm
+        event-type: update-vault-raft-snapshot-agent-images
+        client-payload: '{ "release-tag": "${{ github.event.inputs.release-tag }}" }'
