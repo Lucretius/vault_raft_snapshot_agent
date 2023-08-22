@@ -66,5 +66,5 @@ jobs:
         charts_dir: ${{ env.CHARTS_DIR }}
       env:
         CR_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
-        CR_RELEASE_TEMPLATE: ${{ github.ref_name }}
+        CR_RELEASE_NAME_TEMPLATE: ${{ github.ref_name }}
         CR_MAKE_RELEASE_LATEST: false
