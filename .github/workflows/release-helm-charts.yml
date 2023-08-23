@@ -6,11 +6,9 @@ on:
         description: "of which release should the helm-charts be informed of?"
         type: string
         required: true
-  workflow_call:
-    inputs:
-      release-tag:
-        type: string
-        required: true
+  release:
+    types:
+    - released
 
 jobs:
   trigger-helm-release:
@@ -23,4 +21,4 @@ jobs:
         token: ${{ secrets.HELM_GITHUB_TOKEN }}
         repository: Argelbargel/vault-raft-snapshot-agent-helm
         event-type: update-vault-raft-snapshot-agent-images
-        client-payload: '{ "appVersion": "${{ inputs.release-tag }}" }'
+        client-payload: '{ "appVersion": "${{ inputs.release-tag | github.ref_name }}" }'

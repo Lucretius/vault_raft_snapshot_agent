@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+    - master
     tags-ignore:
-      - "**"
+    - "**"
     paths:
     - "build/VERSION"
 
@@ -44,7 +44,7 @@ jobs:
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag_name: v${{ steps.release_version.outputs.value }}
         name: "Release v${{ steps.release_version.outputs.value }}"
-        draft: true
+        prerelease: true
         generate_release_notes: true
         files: |
           LICENSE.txt
