@@ -23,4 +23,4 @@ jobs:
         token: ${{ secrets.HELM_GITHUB_TOKEN }}
         repository: Argelbargel/vault-raft-snapshot-agent-helm
         event-type: update-vault-raft-snapshot-agent-images
-        client-payload: '{ "appVersion": "${{ github.event.inputs.release-tag }}" }'
+        client-payload: '{ "appVersion": "${{ inputs.release-tag }}" }'

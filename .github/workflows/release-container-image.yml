@@ -152,6 +152,8 @@ jobs:
     needs:
     - publish-images
     uses: ./.github/workflows/release-helm-charts.yml
+    secrets: inherit
     with:
       release-tag: ${{ github.ref_name }}
+
 
