@@ -50,7 +50,7 @@ go get -v ./...;
 go build \
     -a \
     -trimpath \
-    -ldflags "-s -w -extldflags '-static' -X 'main.Version=$VERSION'" \
+    -ldflags "-s -w -extldflags '-static' -X 'main.Version=$VERSION' -X 'main.Platform=$PLATFORM'" \
     -tags 'osusergo netgo static_build' \
     -o "${PLATFORM_OUT_DIR}" \
     ./...

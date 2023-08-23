@@ -2,7 +2,6 @@ package vault_raft_snapshot_agent
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -58,12 +57,8 @@ type S3Config struct {
 }
 
 // ReadConfig reads the configuration file
-func ReadConfig() (*Configuration, error) {
-	file := "/etc/vault.d/snapshot.json"
-	if len(os.Args) > 1 {
-		file = os.Args[1]
-	}
-	cBytes, err := ioutil.ReadFile(file)
+func ReadConfig(file string) (*Configuration, error) {
+	cBytes, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Cannot read configuration file: %v", err.Error())
 	}

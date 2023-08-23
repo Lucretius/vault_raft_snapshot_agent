@@ -2,16 +2,32 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent"
 )
 
 var Version = "development"
+var Platform = "linux/amd64"
+
+type quietBoolFlag struct {
+    cli.BoolFlag
+}
+
+func (qbf *quietBoolFlag) String() string {
+    return cli.FlagStringer(qbf)
+}
+
+func (qbf *quietBoolFlag) GetDefaultText() string {
+    return ""
+}
 
 func listenForInterruptSignals() chan bool {
 	sigs := make(chan os.Signal, 1)
@@ -26,11 +42,52 @@ func listenForInterruptSignals() chan bool {
 }
 
 func main() {
-	done := listenForInterruptSignals()
-	log.Println("Vault Raft Snapshot Agent, Version:", Version)
-	log.Println("Reading configuration...")
-	c, err := vault_raft_snapshot_agent.ReadConfig()
+	cli.VersionPrinter = func(ctx *cli.Context) {
+        fmt.Printf("%s (%s), version: %s\n", ctx.App.Name, Platform, ctx.App.Version)
+    }
 
+	cli.VersionFlag = &quietBoolFlag{
+		cli.BoolFlag{
+			Name:    "version",
+			Aliases: []string{"v"},
+			Usage:   "print the version",
+		},
+	}
+
+	app := &cli.App{
+		Name:    "vault-raft-snapshot-agent",
+		Version: Version,
+		Description: "takes periodic snapshot of vault's raft-db",
+		Flags: []cli.Flag{
+			&cli.PathFlag{
+                Name:    "config",
+                Aliases: []string{"c"},
+				Value:   "/etc/vault.d/snapshot.json",
+                Usage:   "Load configuration from `FILE`",
+				EnvVars: []string{"VAULT_RAFT_SNAPSHOT_AGENT_CONFIG_FILE"},
+            },
+		},
+		Action: func(ctx *cli.Context) error {
+			runSnapshotter(ctx.Path("config"))
+			return nil
+		},
+	}
+	app.CustomAppHelpTemplate = `Usage: {{.HelpName}} [options]
+{{.Description}}
+
+Options:
+{{range $index, $option := .VisibleFlags}}{{if $index}}
+{{end}}{{$option}}{{end}}`
+
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func runSnapshotter(configFile cli.Path) {
+	done := listenForInterruptSignals()
+
+	c, err := vault_raft_snapshot_agent.ReadConfig(configFile)
 	if err != nil {
 		log.Fatalln("Configuration could not be found")
 	}
