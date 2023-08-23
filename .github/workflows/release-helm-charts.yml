@@ -7,11 +7,11 @@ on:
         type: string
         required: true
   release:
-    types:
-    - released
+    types: [published, released]
 
 jobs:
   trigger-helm-release:
+    if: always() && !github.event.release.prerelease
     runs-on: ubuntu-latest
 
     steps:

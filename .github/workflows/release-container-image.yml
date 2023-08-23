@@ -3,8 +3,7 @@ name: Publish Container Image
 on:
   workflow_dispatch:
   release:
-    types:
-    - prereleased
+    types: [published, prereleased]
 
 concurrency:
   group: release-container-${{ github.ref }}
