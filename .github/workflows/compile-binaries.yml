@@ -29,6 +29,10 @@ on:
     - ".github/workflows/*-helm-charts.yml"
     - ".github/workflows/release*.yml"
 
+concurrency:
+  group: compile-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ARTIFACT_RETENTION_DAYS: 1
 

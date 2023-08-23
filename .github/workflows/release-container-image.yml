@@ -6,6 +6,11 @@ on:
     tags:
     - "v**"
 
+concurrency:
+  group: release-container-${{ github.ref }}
+  cancel-in-progress: true
+
+
 env:
   IMAGE_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
