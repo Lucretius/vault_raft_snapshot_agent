@@ -57,7 +57,7 @@ jobs:
       run: |
         mkdir ./dist
         chmod +x ./build/build.sh
-        ./build/build.sh . ./dist ${{ github.ref_name }} ${{ matrix.platform }}
+        ./build/build.sh -b . -d ./dist -p ${{ matrix.platform }}
 
     - name: Upload binary
       if: inputs.upload-artifacts
