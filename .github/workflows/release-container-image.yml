@@ -163,7 +163,7 @@ jobs:
         prerelease: true
 
     - name: Publish release
-      if: steps.release.outputs.id != ""
+      if: steps.release.outputs.id != ''
       uses: StuYarrow/publish-release@v1.1.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
