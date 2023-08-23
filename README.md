@@ -63,6 +63,9 @@ If your configuration is right and Vault is running on the same host as the agen
 
 ## Configuration
 
+The default location of the configuration-file is `/etc/vault.d/snapshots.json`. You may change this path by running the agent with `vault-raft-snapshot-agent --config <path>`.
+
+### Global configuration options
 `addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots. Defaults to "https://127.0.0.1:8200".
 
 `retain` The number of backups to retain.
@@ -70,7 +73,7 @@ If your configuration is right and Vault is running on the same host as the agen
 `frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
 
-### Default authentication mode
+#### Default authentication mode
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
 
 `secret_id` Specifies the secret_id used to call the Vault API.
@@ -78,7 +81,7 @@ If your configuration is right and Vault is running on the same host as the agen
 `approle` Specifies the approle name used to login.  Defaults to "approle".
 
 
-### Kubernetes authentication mode
+#### Kubernetes authentication mode
 Incase we're running the application under kubernetes, we can use Vault's Kubernetes Auth
 as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/auth/kubernetes)
 
