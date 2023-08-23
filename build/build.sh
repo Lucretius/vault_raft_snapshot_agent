@@ -1,21 +1,16 @@
 #! /bin/bash
 set -eu 
 
-VALID_ARGS=$(getopt -o a:b:d:p: --long build-dir:,dist-dir:,platform:,post-action: -- "$@")
+VALID_ARGS=$(getopt -n $(basename $0) -o b:d:p: --long build-dir:,dist-dir:,platform: -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1;
 fi
 
 PLATFORM=${BUILDPLATFORM:-linux/amd64}
-POST_ACTION=""
 
 eval set -- "$VALID_ARGS"
 while [ : ]; do
   case "$1" in
-    -a | --post-action)
-        POST_ACTION=$2
-        shift 2
-        ;;
     -b | --build-dir)
         BUILD_DIR=$2
         shift 2
@@ -55,7 +50,7 @@ go get -v ./...;
 go build \
     -a \
     -trimpath \
-    -ldflags "-s -w -v -extldflags '-static' -X 'main.Version=$VERSION'" \
+    -ldflags "-s -w -extldflags '-static' -X 'main.Version=$VERSION'" \
     -tags 'osusergo netgo static_build' \
     -o "${PLATFORM_OUT_DIR}" \
     ./...
@@ -68,11 +63,13 @@ while IFS= read -r -d $'\0' binary; do
     mv $binary "$DIST_DIR/$DIST_FILE"
 done < <(find "$OUT_DIR" -type f -print0)
 
-if [ "$POST_ACTION" == "run-agent" ]; then
-    echo "Running agent $DIST_DIR/vault-raft-snapshot-agent_${GOOS}_${GOARCH}..."
+if [ "${1:-}" == "run-agent" ]; then
+    shift
+    echo "Running agent $DIST_DIR/vault-raft-snapshot-agent_${GOOS}_${GOARCH} $@..."
     AGENT_BINARY="$DIST_DIR/vault-raft-snapshot-agent_${GOOS}_${GOARCH}"
     chmod +x "$AGENT_BINARY"
-    exec $AGENT_BINARY
-elif [ -n "$POST_ACTION" ]; then
-    exec sh -c "$POST_ACTION"
+    exec $AGENT_BINARY $@
+elif [ -n "${1:-}" ]; then
+    echo "Executing $@..."
+    exec sh -c "$@"
 fi
