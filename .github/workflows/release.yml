@@ -19,7 +19,7 @@ jobs:
       uses: "ncipollo/release-action@v1"
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: ${{ github_ref.name }}
+        tag: ${{ github.ref.name }}
         name: "Release v${{ inputs.release-version || needs.determine-release-version.outputs.release-version }}"
         draft: true
         generateReleaseNotes: true
@@ -66,7 +66,7 @@ jobs:
       uses: "ncipollo/release-action@v1"
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: ${{ github_ref.name }}
+        tag: ${{ github.ref.name }}
         draft: false
         makeLatest: ${{ steps.latest-release.outputs.tag_name == github.ref_name }}
         allowUpdates: true
