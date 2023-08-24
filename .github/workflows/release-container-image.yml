@@ -112,12 +112,13 @@ jobs:
           TARGETOS=${{ steps.platform_meta.outputs.os }}
           TARGETARCH=${{ steps.platform_meta.outputs.arch }}
         provenance: false
-        tags: ${{ needs.determine-image-metadata.outputs.tags }}
         labels: ${{ needs.determine-image-metadata.outputs.labels }}
         outputs: type=image,name=${{ needs.determine-image-metadata.outputs.ref }},push-by-digest=true,name-canonical=true,push=true
 
     - name: Inspect image
-      run: docker buildx imagetools inspect ${{ needs.determine-image-metadata.outputs.ref }}:${{ needs.determine-image-metadata.outputs.version }}
+      run: |
+        digest=${{ steps.build.outputs.digest }}
+        docker buildx imagetools inspect ${{ needs.determine-image-metadata.outputs.ref }}:${digest#sha256:}
 
     - name: Export digest
       run: |

@@ -32,5 +32,4 @@ jobs:
         tag: ${{ github.ref.name }}
         allowUpdates: true
         artifacts: |
-          LICENSE.txt
           dist/*
