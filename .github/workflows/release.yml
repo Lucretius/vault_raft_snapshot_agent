@@ -33,7 +33,7 @@ jobs:
     needs:
     - create-draft-release
 
-  release-container-image:
+  release-container-images:
     if: always() && !cancelled() && !failure()
     uses: ./.github/workflows/release-container-image.yml
     needs:
