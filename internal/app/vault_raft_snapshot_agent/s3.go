@@ -26,7 +26,7 @@ func (s *Snapshotter) CreateS3Snapshot(reader io.ReadWriter, config *Configurati
 		ServerSideEncryption: nil,
 	}
 
-	if config.AWS.SSE == true {
+	if config.AWS.SSE {
 		input.ServerSideEncryption = aws.String("AES256")
 	}
 

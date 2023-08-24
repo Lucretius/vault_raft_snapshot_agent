@@ -65,7 +65,11 @@ func (s *Snapshotter) ConfigureVaultClient(config *Configuration) error {
 	tlsConfig := &vaultApi.TLSConfig{
 		Insecure: true,
 	}
-	vaultConfig.ConfigureTLS(tlsConfig)
+	err :=vaultConfig.ConfigureTLS(tlsConfig)
+	if err != nil {
+		return err
+	}
+
 	api, err := vaultApi.NewClient(vaultConfig)
 	if err != nil {
 		return err
@@ -143,7 +147,7 @@ func (s *Snapshotter) ConfigureS3(config *Configuration) error {
 		awsConfig.Endpoint = aws.String(config.AWS.Endpoint)
 	}
 
-	if config.AWS.S3ForcePathStyle != false {
+	if config.AWS.S3ForcePathStyle {
 		awsConfig.S3ForcePathStyle = aws.Bool(config.AWS.S3ForcePathStyle)
 	}
 

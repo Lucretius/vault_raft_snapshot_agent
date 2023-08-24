@@ -5,7 +5,7 @@ go 1.18
 require (
 	cloud.google.com/go v0.38.0
 	github.com/Azure/azure-storage-blob-go v0.8.0
-	github.com/aws/aws-sdk-go v1.30.14
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/urfave/cli/v2 v2.25.7
 	google.golang.org/api v0.22.0
@@ -36,11 +36,11 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.22.3 // indirect
-	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
+	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f // indirect
+	golang.org/x/net v0.0.0-20220906165146-f3363e06e74c // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
-	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect

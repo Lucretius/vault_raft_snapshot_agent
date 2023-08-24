@@ -106,9 +106,17 @@ func runSnapshotter(configFile cli.Path) {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			switch c.VaultAuthMethod {
 			case "k8s":
-				snapshotter.SetClientTokenFromK8sAuth(c)
+				err := snapshotter.SetClientTokenFromK8sAuth(c)
+				if err != nil {
+					log.Println(err.Error())
+					log.Fatalln("Unable to set token for kubernetes auth")
+				}
 			default:
-				snapshotter.SetClientTokenFromAppRole(c)
+				err := snapshotter.SetClientTokenFromAppRole(c)
+				if err != nil {
+					log.Println(err.Error())
+					log.Fatalln("Unable to set token for app-role auth")
+				}
 			}
 		}
 		leader, err := snapshotter.API.Sys().Leader()
