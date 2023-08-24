@@ -141,12 +141,6 @@ jobs:
     - build-platform-images
 
     steps:
-    - name: Download digests
-      uses: actions/download-artifact@v3
-      with:
-        name: digests
-        path: /tmp/digests
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
@@ -157,14 +151,28 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Download digests
+      uses: actions/download-artifact@v3
+      with:
+        name: digests
+        path: /tmp/digests
+
     - name: Create manifest list and push
       working-directory: /tmp/digests
       run: |
         read -r -d '' DOCKER_METADATA_OUTPUT_JSON <<'EOF'
           ${{ needs.determine-image-metadata.outputs.json }}
         EOF
-        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf '${{ needs.determine-image-metadata.outputs.ref }}@sha256:%s ' *)
+
+        echo $DOCKER_METADATA_OUTPUT_JSON
+
+        TAGS=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        echo $TAGS
+
+        DIGESTS=$(printf '${{ needs.determine-image-metadata.outputs.ref }}@sha256:%s ' *)
+        echo $DIGESTS
+
+        docker buildx imagetools create $TAGS $DIGESTS
 
 
     - name: Inspect image
