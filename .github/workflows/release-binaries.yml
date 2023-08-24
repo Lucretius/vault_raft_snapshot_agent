@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   compile-binaries:
-    if: startsWith(github.ref, '/refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/compile-binaries.yml
 
   release-binaries:
