@@ -160,9 +160,14 @@ jobs:
     - name: Create manifest list and push
       working-directory: /tmp/digests
       run: |
-        echo "$DOCKER_METADATA_OUTPUT_JSON"
+        IMAGE_METADATA_JSON=$(
+        cat <<EOF
+          ${{ needs.determine-image-metadata.outputs.json }}
+        EOF
+        )
+        echo "$IMAGE_METADATA_JSON"
 
-        TAGS=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        TAGS=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$IMAGE_METADATA_JSON")
         echo $TAGS
 
         DIGESTS=$(printf '${{ needs.determine-image-metadata.outputs.ref }}@sha256:%s ' *)
