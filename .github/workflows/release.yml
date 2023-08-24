@@ -38,12 +38,14 @@ jobs:
   release-binaries:
     if: always() && !cancelled() && !failure()
     uses: ./.github/workflows/release-binaries.yml
+    secrets: inherit
     needs:
     - create-draft-release
 
   release-container-images:
     if: always() && !cancelled() && !failure()
     uses: ./.github/workflows/release-container-image.yml
+    secrets: inherit
     needs:
     - release-binaries
     - create-draft-release
@@ -88,6 +90,7 @@ jobs:
     uses: ./.github/workflows/release-helm-charts.yml
     with:
       latest-release: ${{ needs.publish-release.outputs.latest-release }}
+    secrets: inherit
     needs:
     - publish-release
 
