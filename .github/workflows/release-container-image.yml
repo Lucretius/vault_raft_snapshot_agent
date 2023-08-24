@@ -165,13 +165,9 @@ jobs:
           ${{ needs.determine-image-metadata.outputs.json }}
         EOF
         )
-        echo "$IMAGE_METADATA_JSON"
 
         TAGS=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$IMAGE_METADATA_JSON")
-        echo $TAGS
-
         DIGESTS=$(printf '${{ needs.determine-image-metadata.outputs.ref }}@sha256:%s ' *)
-        echo $DIGESTS
 
         docker buildx imagetools create $TAGS $DIGESTS
 
