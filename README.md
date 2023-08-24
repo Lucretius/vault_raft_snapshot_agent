@@ -179,3 +179,9 @@ To learn more about AppRole's and why this project chose to use them, see [the V
 ### Kubernetes authentication mode
 
 To Enable Kubernetes authentication mode, we should follow these steps from [the Vault docs](https://www.vaultproject.io/docs/auth/kubernetes#configuration)
+
+## License
+- Source code is licensed under MIT
+
+## Contributors
+- Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius)
