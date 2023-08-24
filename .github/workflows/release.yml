@@ -83,7 +83,7 @@ jobs:
         omitBodyDuringUpdate: true
         omitNameDuringUpdate: true
         skipIfReleaseExists: false
-        updateOnlyUnreleased: true
+        updateOnlyUnreleased: false
 
   release-helm-charts:
     if: needs.publish-release.outputs.latest-release == github.ref_name
