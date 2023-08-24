@@ -24,7 +24,7 @@ on:
     branches:
     - '**'
     tags-ignore:
-    - "v**.**.**"
+    - "**"
     paths-ignore:
     - "README.md"
     - "**Dockerfile"
