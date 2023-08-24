@@ -160,8 +160,10 @@ jobs:
     - name: Create manifest list and push
       working-directory: /tmp/digests
       run: |
-        docker buildx imagetools create $(echo '${{ needs.determine-image-metadata.outputs.json }}' | jq -cr '.tags | map("-t " + .) | join(" ")') \
+        $DOCKER_METADATA_OUTPUT_JSON="""${{ needs.determine-image-metadata.outputs.json }}"""
+        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf '${{ needs.determine-image-metadata.outputs.ref }}@sha256:%s ' *)
+
 
     - name: Inspect image
       run: docker buildx imagetools inspect ${{ needs.determine-image-metadata.outputs.ref }}:${{ needs.determine-image-metadata.outputs.version }}
