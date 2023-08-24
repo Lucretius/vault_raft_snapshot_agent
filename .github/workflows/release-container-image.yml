@@ -160,7 +160,7 @@ jobs:
     - name: Create manifest list and push
       working-directory: /tmp/digests
       run: |
-        read -r -d '' DOCKER_META_OUTPUT_JSON <<'EOF'
+        read -r -d '' DOCKER_METADATA_OUTPUT_JSON <<'EOF'
           ${{ needs.determine-image-metadata.outputs.json }}
         EOF
         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
