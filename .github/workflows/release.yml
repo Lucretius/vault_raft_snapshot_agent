@@ -26,7 +26,7 @@ jobs:
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag: ${{ github.ref_name }}
-        name: "Release v${{ github.ref_name }}"
+        name: "Release ${{ github.ref_name }}"
         draft: true
         generateReleaseNotes: true
         allowUpdates: false
