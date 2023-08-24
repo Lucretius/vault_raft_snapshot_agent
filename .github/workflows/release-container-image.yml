@@ -116,9 +116,7 @@ jobs:
         outputs: type=image,name=${{ needs.determine-image-metadata.outputs.ref }},push-by-digest=true,name-canonical=true,push=true
 
     - name: Inspect image
-      run: |
-        digest=${{ steps.build.outputs.digest }}
-        docker buildx imagetools inspect ${{ needs.determine-image-metadata.outputs.ref }}:${digest#sha256:}
+      run: docker buildx imagetools inspect ${{ needs.determine-image-metadata.outputs.ref }}:${{ steps.build.outputs.imageid }}
 
     - name: Export digest
       run: |

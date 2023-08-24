@@ -31,5 +31,9 @@ jobs:
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag: ${{ github.ref.name }}
         allowUpdates: true
-        artifacts: |
-          dist/*
+        artifactErrorsFailBuild: true
+        omitBodyDuringUpdate: true
+        omitDraftDuringUpdate: true
+        omitNameDuringUpdate: true
+        replacesArtifacts: true
+        artifacts: dist/*

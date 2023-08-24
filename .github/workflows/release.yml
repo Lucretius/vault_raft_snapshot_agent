@@ -32,6 +32,7 @@ jobs:
         allowUpdates: false
         updateOnlyUnreleased: true
         skipIfReleaseExists: true
+        artifactErrorsFailBuild: true
         artifacts: LICENSE.txt
 
   release-binaries:
@@ -74,11 +75,13 @@ jobs:
       with:
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag: ${{ github.ref.name }}
+        allowUpdates: true
         draft: false
         makeLatest: ${{ steps.latest-release.outputs.tag_name == github.ref_name }}
-        allowUpdates: true
-        updateOnlyUnreleased: true
+        omitBodyDuringUpdate: true
+        omitNameDuringUpdate: true
         skipIfReleaseExists: false
+        updateOnlyUnreleased: true
 
   release-helm-charts:
     if: needs.publish-release.outputs.latest-release == github.ref_name
