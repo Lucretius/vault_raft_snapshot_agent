@@ -1,12 +1,13 @@
 #! /bin/bash
 set -eu 
 
-VALID_ARGS=$(getopt -n $(basename $0) -o b:d:p: --long build-dir:,dist-dir:,platform: -- "$@")
+VALID_ARGS=$(getopt -n $(basename $0) -o b:d:p:v: --long build-dir:,dist-dir:,platform:,version: -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1;
 fi
 
 PLATFORM=${BUILDPLATFORM:-linux/amd64}
+VERSION="Development"
 
 eval set -- "$VALID_ARGS"
 while [ : ]; do
@@ -21,6 +22,10 @@ while [ : ]; do
         ;;
     -p | --platform)
         PLATFORM=$2
+        shift 2
+        ;;
+    -v | --version)
+        VERSION=$2
         shift 2
         ;;
     --) shift; 
@@ -39,11 +44,6 @@ cd ${BUILD_DIR}
 OUT_DIR="$BUILD_DIR/out"
 PLATFORM_OUT_DIR=${OUT_DIR}/${PLATFORM}
 mkdir -p ${PLATFORM_OUT_DIR}
-
-VERSION="dev"
-if [ -e "$SCRIPT_DIR/VERSION" ]; then
-    VERSION=$(cat "$SCRIPT_DIR/VERSION")
-fi
 
 echo "Building go source in $(realpath "$BUILD_DIR") for $GOOS/$GOARCH to $(realpath "$PLATFORM_OUT_DIR")..."
 go get -v ./...;

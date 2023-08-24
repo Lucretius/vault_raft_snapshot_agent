@@ -1,0 +1,82 @@
+name: Create new Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+    - "v**.**.**"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-draft-release:
+    if: startsWith(github..ref, '/refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create or update Release
+      uses: "ncipollo/release-action@v1"
+      with:
+        token: "${{ secrets.GITHUB_TOKEN }}"
+        tag: ${{ github_ref.name }}
+        name: "Release v${{ inputs.release-version || needs.determine-release-version.outputs.release-version }}"
+        draft: true
+        generateReleaseNotes: true
+        allowUpdates: false
+        updateOnlyUnreleased: true
+        skipIfReleaseExists: true
+
+  release-binaries:
+    if: always() && !cancelled() && !failure()
+    uses: ./.github/workflows/release-binaries.yml
+    needs:
+    - create-draft-release
+
+  release-container-image:
+    if: always() && !cancelled() && !failure()
+    uses: ./.github/workflows/release-container-image.yml
+    needs:
+    - release-binaries
+    - create-draft-release
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs:
+    - create-draft-release
+    - release-binaries
+    - release-container-images
+
+    outputs:
+      latest-release: ${{ steps.latest-release.outputs.tag_name }}
+
+    steps:
+    - name: Get latest release
+      uses: cardinalby/git-get-release-action@v1
+      id: latest-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        latest: true
+        draft: true
+        prerelease: false
+
+    - name: Publish release
+      uses: "ncipollo/release-action@v1"
+      with:
+        token: "${{ secrets.GITHUB_TOKEN }}"
+        tag: ${{ github_ref.name }}
+        draft: false
+        makeLatest: ${{ steps.latest-release.outputs.tag_name == github.ref_name }}
+        allowUpdates: true
+        updateOnlyUnreleased: true
+        skipIfReleaseExists: false
+
+  release-helm-charts:
+    if: needs.publish-release.outputs.latest-release == github.ref_name
+    uses: ./.github/workflows/release-helm-charts.yml
+    with:
+      latest-release: ${{ needs.publish-release.outputs.latest-release }}
+    needs:
+    - publish-release
+
