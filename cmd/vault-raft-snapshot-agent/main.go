@@ -35,7 +35,8 @@ func listenForInterruptSignals() chan bool {
 	done := make(chan bool, 1)
 
 	go func() {
-		_ = <-sigs
+		// lint:ignore S1005 TODO: there might be a reason for this, which one?
+		_ = <- sigs
 		done <- true
 	}()
 	return done
