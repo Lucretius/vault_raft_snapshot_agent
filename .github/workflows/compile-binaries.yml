@@ -28,11 +28,13 @@ on:
     paths-ignore:
     - "README.md"
     - "**Dockerfile"
+    - ".github/workflows/lint.yml"
     - ".github/workflows/release*.yml"
   pull_request:
     paths-ignore:
     - "Dockerfile"
     - "**README.md"
+    - ".github/workflows/lint.yml"
     - ".github/workflows/release*.yml"
 
 concurrency:
