@@ -61,6 +61,8 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
+        check-latest: true
+        cache: true
 
     - name: Compile binary
       run: |
