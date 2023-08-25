@@ -1,8 +1,9 @@
 package main
 
 import (
-	"bytes"
+	"context"	
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -103,6 +104,16 @@ func runSnapshotter(configFile cli.Path) {
 		frequency = time.Hour
 	}
 
+	snapshotTimeout := 60 * time.Second
+
+	if c.SnapshotTimeout != "" {
+		snapshotTimeout, err = time.ParseDuration(c.SnapshotTimeout)
+
+		if err != nil {
+			log.Fatalln("Unable to parse snapshot timeout", err)
+		}
+	}
+
 	for {
 		if snapshotter.TokenExpiration.Before(time.Now()) {
 			switch c.VaultAuthMethod {
@@ -112,6 +123,8 @@ func runSnapshotter(configFile cli.Path) {
 					log.Println(err.Error())
 					log.Fatalln("Unable to set token for kubernetes auth")
 				}
+			case "token":
+				// Do nothing as vault agent will auto-renew the token
 			default:
 				err := snapshotter.SetClientTokenFromAppRole(c)
 				if err != nil {
@@ -129,28 +142,45 @@ func runSnapshotter(configFile cli.Path) {
 		if !leaderIsSelf {
 			log.Println("Not running on leader node, skipping.")
 		} else {
-			var snapshot bytes.Buffer
-			err := snapshotter.API.Sys().RaftSnapshot(&snapshot)
-			if err != nil {
-				log.Fatalln("Unable to generate snapshot", err.Error())
-			}
-			now := time.Now().UnixNano()
-			if c.Local.Path != "" {
-				snapshotPath, err := snapshotter.CreateLocalSnapshot(&snapshot, c, now)
-				logSnapshotError("local", snapshotPath, err)
-			}
-			if c.AWS.Bucket != "" {
-				snapshotPath, err := snapshotter.CreateS3Snapshot(&snapshot, c, now)
-				logSnapshotError("aws", snapshotPath, err)
-			}
-			if c.GCP.Bucket != "" {
-				snapshotPath, err := snapshotter.CreateGCPSnapshot(&snapshot, c, now)
-				logSnapshotError("gcp", snapshotPath, err)
-			}
-			if c.Azure.ContainerName != "" {
-				snapshotPath, err := snapshotter.CreateAzureSnapshot(&snapshot, c, now)
-				logSnapshotError("azure", snapshotPath, err)
-			}
+			func() {
+				snapshot, err := os.CreateTemp("", "snapshot")
+
+				if err != nil {
+					log.Fatalln("Unable to create temporary snapshot file", err.Error())
+				}
+
+				defer os.Remove(snapshot.Name())
+
+				ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
+				defer cancel()
+				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
+				if err != nil {
+					log.Fatalln("Unable to generate snapshot", err.Error())
+				}
+
+				_, err = snapshot.Seek(0, io.SeekStart)
+				if err != nil {
+					log.Fatalln("Unable to seek to start of snapshot file", err.Error())
+				}				
+
+				now := time.Now().UnixNano()
+				if c.Local.Path != "" {
+					snapshotPath, err := snapshotter.CreateLocalSnapshot(snapshot, c, now)
+					logSnapshotError("local", snapshotPath, err)
+				}
+				if c.AWS.Bucket != "" {
+					snapshotPath, err := snapshotter.CreateS3Snapshot(snapshot, c, now)
+					logSnapshotError("aws", snapshotPath, err)
+				}
+				if c.GCP.Bucket != "" {
+					snapshotPath, err := snapshotter.CreateGCPSnapshot(snapshot, c, now)
+					logSnapshotError("gcp", snapshotPath, err)
+				}
+				if c.Azure.ContainerName != "" {
+					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
+					logSnapshotError("azure", snapshotPath, err)
+				}
+			}()			
 		}
 		select {
 		case <-time.After(frequency):

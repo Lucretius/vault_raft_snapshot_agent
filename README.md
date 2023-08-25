@@ -75,6 +75,7 @@ The default location of the configuration-file is `/etc/vault.d/snapshots.json`.
 
 `frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
+`timeout` Timeout for creating snapshots. Examples: `30s`, `1h`. Default: `60s`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
 
 #### Default authentication mode
 `role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
@@ -93,6 +94,13 @@ as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/a
 `k8s_auth_role` Specifies vault k8s auth role
 
 `k8s_auth_path` Specifies vault k8s auth path
+
+#### Token authentication mode
+Authenticates with vault using a supplied token.
+
+`vault_auth_method` Set it to "token", otherwise, approle will be chosen
+
+`token` Specifies the vault token
 
 ### Storage options
 
@@ -124,7 +132,7 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 `s3_bucket` - bucket to store snapshots in (required for AWS writes to work)
 
-`s3_key_prefix` - Prefix to store s3 snapshots in.  Defaults to `raft_snapshots`
+`s3_key_prefix` - Prefix to store s3 snapshots in.  Defaults to empty string
 
 `s3_server_side_encryption` -  Encryption is **off** by default.  Set to true to turn on AWS' AES256 encryption.  Support for AWS KMS keys is not currently supported.
 
@@ -183,4 +191,5 @@ To Enable Kubernetes authentication mode, we should follow these steps from [the
 - Source code is licensed under MIT
 
 ## Contributors
-- Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius)
+- Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius/vault_raft_snapshot_agent/)
+- This build contains improvements donne by [@Bootsport](https://github.com/Boostport/vault_raft_snapshot_agent/)
