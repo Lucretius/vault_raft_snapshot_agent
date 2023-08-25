@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"	
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -19,15 +19,15 @@ var Version = "development"
 var Platform = "linux/amd64"
 
 type quietBoolFlag struct {
-    cli.BoolFlag
+	cli.BoolFlag
 }
 
 func (qbf *quietBoolFlag) String() string {
-    return cli.FlagStringer(qbf)
+	return cli.FlagStringer(qbf)
 }
 
 func (qbf *quietBoolFlag) GetDefaultText() string {
-    return ""
+	return ""
 }
 
 func listenForInterruptSignals() chan bool {
@@ -36,8 +36,7 @@ func listenForInterruptSignals() chan bool {
 	done := make(chan bool, 1)
 
 	go func() {
-		// lint:ignore S1005 TODO: there might be a reason for this, which one?
-		_ = <- sigs
+		<-sigs
 		done <- true
 	}()
 	return done
@@ -45,8 +44,8 @@ func listenForInterruptSignals() chan bool {
 
 func main() {
 	cli.VersionPrinter = func(ctx *cli.Context) {
-        fmt.Printf("%s (%s), version: %s\n", ctx.App.Name, Platform, ctx.App.Version)
-    }
+		fmt.Printf("%s (%s), version: %s\n", ctx.App.Name, Platform, ctx.App.Version)
+	}
 
 	cli.VersionFlag = &quietBoolFlag{
 		cli.BoolFlag{
@@ -57,17 +56,17 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:    "vault-raft-snapshot-agent",
-		Version: Version,
+		Name:        "vault-raft-snapshot-agent",
+		Version:     Version,
 		Description: "takes periodic snapshot of vault's raft-db",
 		Flags: []cli.Flag{
 			&cli.PathFlag{
-                Name:    "config",
-                Aliases: []string{"c"},
+				Name:    "config",
+				Aliases: []string{"c"},
 				Value:   "/etc/vault.d/snapshot.json",
-                Usage:   "Load configuration from `FILE`",
+				Usage:   "Load configuration from `FILE`",
 				EnvVars: []string{"VAULT_RAFT_SNAPSHOT_AGENT_CONFIG_FILE"},
-            },
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			runSnapshotter(ctx.Path("config"))
@@ -161,7 +160,7 @@ func runSnapshotter(configFile cli.Path) {
 				_, err = snapshot.Seek(0, io.SeekStart)
 				if err != nil {
 					log.Fatalln("Unable to seek to start of snapshot file", err.Error())
-				}				
+				}
 
 				now := time.Now().UnixNano()
 				if c.Local.Path != "" {
@@ -180,7 +179,7 @@ func runSnapshotter(configFile cli.Path) {
 					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
 					logSnapshotError("azure", snapshotPath, err)
 				}
-			}()			
+			}()
 		}
 		select {
 		case <-time.After(frequency):
