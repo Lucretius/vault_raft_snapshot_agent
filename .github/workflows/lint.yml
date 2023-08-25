@@ -15,10 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Read go-version
+      id: go-version
+      run: |
+        echo "version=$(sed -n 's/^go\s*\([\d.]*\)/\1/p' go.mod)" >> "$GITHUB_OUTPUT"
+
     - uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
-        cache: false
+        go-version: '${{ steps.go-version.outputs.version }}'
 
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
