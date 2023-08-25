@@ -23,6 +23,7 @@ jobs:
     - uses: actions/setup-go@v4
       with:
         go-version: '${{ steps.go-version.outputs.version }}'
+        cache: false
 
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
