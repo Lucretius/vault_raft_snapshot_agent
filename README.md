@@ -1,6 +1,5 @@
-![Build](https://github.com/Argelbargel/vault-raft-snapshot-agent/workflows/Build/badge.svg?branch=master)
-![Release](https://img.shields.io/github/v/release/Argelbargel/vault-raft-snapshot-agent)
-
+[![Release](https://img.shields.io/github/v/release/Argelbargel/vault-raft-snapshot-agent)](https://github.com/Argelbargel/vault-raft-snapshot-agent/releases/latest)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vault-raft-snapshot-agent)](https://artifacthub.io/packages/search?repo=vault-raft-snapshot-agent)
 
 # Vault Raft Snapshot Agent
 
