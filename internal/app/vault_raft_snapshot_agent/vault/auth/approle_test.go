@@ -10,7 +10,6 @@ import (
 
 func TestCreateDefaultAppRoleAuth(t *testing.T) {
 	authPath := "test"
-	expectedLoginPath := "auth/" + authPath + "/login"
 	expectedRoleId := "testRoleId"
 	expectedSecretId := "testSecretId"
 
@@ -26,12 +25,14 @@ func TestCreateDefaultAppRoleAuth(t *testing.T) {
 	_, err := auth.Refresh(&authApiStub)
 
 	assert.NoErrorf(t, err, "auth-refresh failed unexpectedly")
-	assertAppRoleAuthValues(t, expectedLoginPath, expectedRoleId, expectedSecretId, auth, authApiStub)
+	assertAppRoleAuthValues(t, authPath, expectedRoleId, expectedSecretId, auth, authApiStub)
 }
 
-func assertAppRoleAuthValues(t *testing.T, expectedLoginPath string, expectedRoleId string, expectedSecretId string, auth authBackend, api appRoleVaultAuthApiStub) {
+func assertAppRoleAuthValues(t *testing.T, expectedAuthPath string, expectedRoleId string, expectedSecretId string, auth authBackend, api appRoleVaultAuthApiStub) {
+	t.Helper()
+
 	assert.Equal(t, "AppRole", auth.name)
-	assert.Equal(t, expectedLoginPath, api.path)
+	assert.Equal(t, expectedAuthPath, api.path)
 	assert.Equal(t, expectedRoleId, api.roleId)
 	assert.Equal(t, expectedSecretId, api.secretId)
 }

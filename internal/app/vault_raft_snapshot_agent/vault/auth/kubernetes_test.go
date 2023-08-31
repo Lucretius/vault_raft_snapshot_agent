@@ -15,7 +15,6 @@ import (
 func TestCreateKubernetesAuth(t *testing.T) {
 	authPath := "test"
 	jwtPath := os.TempDir() + "/kubernetes"
-	expectedLoginPath := "auth/" + authPath + "/login"
 	expectedRole := "testRole"
 	expectedJwt, createdFile := createJwtFile(t, jwtPath, "testSecret")
 	if createdFile {
@@ -34,7 +33,7 @@ func TestCreateKubernetesAuth(t *testing.T) {
 	_, err := auth.Refresh(&authApiStub)
 
 	assert.NoErrorf(t, err, "auth-refresh failed unexpectedly")
-	assertKubernetesAuthValues(t, expectedLoginPath, expectedRole, expectedJwt, auth, authApiStub)
+	assertKubernetesAuthValues(t, authPath, expectedRole, expectedJwt, auth, authApiStub)
 }
 
 func TestCreateKubernetesAuthWithMissingJwtPath(t *testing.T) {
@@ -56,9 +55,9 @@ func TestCreateKubernetesAuthWithMissingJwtPath(t *testing.T) {
 	assert.Errorf(t, err, "kubernetes auth refresh does not fail when jwt-file is missing")
 }
 
-func assertKubernetesAuthValues(t *testing.T, expectedLoginPath string, expectedRole string, expectedJwt string, auth authBackend, api kubernetesVaultAuthApiStub) {
+func assertKubernetesAuthValues(t *testing.T, expectedAuthPath string, expectedRole string, expectedJwt string, auth authBackend, api kubernetesVaultAuthApiStub) {
 	assert.Equal(t, "Kubernetes", auth.name)
-	assert.Equal(t, expectedLoginPath, api.path)
+	assert.Equal(t, expectedAuthPath, api.path)
 	assert.Equal(t, expectedRole, api.role)
 	assert.Equal(t, expectedJwt, api.jwt)
 }

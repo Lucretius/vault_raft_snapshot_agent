@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"path"
 	"time"
 )
 
@@ -18,7 +17,7 @@ func (b authBackend) Refresh(api VaultAuthAPI) (time.Time, error) {
 		return time.Now(), fmt.Errorf("error creating credentials for auth-backend %s: %s", b.name, err)
 	}
 
-	leaseDuration, err := api.LoginToBackend(path.Clean("auth/"+b.path+"/login"), credentials)
+	leaseDuration, err := api.LoginToBackend(b.path, credentials)
 	if err != nil {
 		return time.Now(), fmt.Errorf("error logging into vault using auth-backend %s: %s", b.name, err)
 	}

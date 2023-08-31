@@ -40,7 +40,6 @@ func TestAuthBackendFailsIfLoginFails(t *testing.T) {
 func TestAuthBackendPassesPathAndLoginCredentials(t *testing.T) {
 	authApiStub := backendVaultAuthApiStub{}
 	authPath := "test"
-	expectedAuthPath := "auth/" + authPath + "/login"
 	expectedCredentials := map[string]interface{}{
 		"key": "value",
 	}
@@ -55,7 +54,7 @@ func TestAuthBackendPassesPathAndLoginCredentials(t *testing.T) {
 	_, err := auth.Refresh(&authApiStub)
 
 	assert.NoErrorf(t, err, "auth backend failed unexpectedly")
-	assert.Equal(t, expectedAuthPath, authApiStub.loginPath)
+	assert.Equal(t, authPath, authApiStub.authPath)
 	assert.Equal(t, expectedCredentials, authApiStub.loginCredentials)
 }
 
@@ -78,14 +77,14 @@ func TestBackendAuthReturnsExpirationBasedOnLoginLeaseDuration(t *testing.T) {
 type backendVaultAuthApiStub struct {
 	loginFails       bool
 	triedToLogin     bool
-	loginPath        string
+	authPath        string
 	loginCredentials map[string]interface{}
 	leaseDuration    time.Duration
 }
 
 func (stub *backendVaultAuthApiStub) LoginToBackend(path string, credentials map[string]interface{}) (leaseDuration time.Duration, err error) {
 	stub.triedToLogin = true
-	stub.loginPath = path
+	stub.authPath = path
 	stub.loginCredentials = credentials
 	if stub.loginFails {
 		return 0, errors.New("login failed")
