@@ -135,7 +135,7 @@ Only one of the following authentication options should be specified. If multipl
 When using App-Role or Kubernetes authentication Vault Raft Snapshot Agent automatically renews the authentication when it expires.
 
 
-#### AppRole authentication (`approle`)
+#### AppRole authentication
 
 An AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials. To learn more about AppRole's, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
 
