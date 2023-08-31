@@ -131,6 +131,7 @@ func runSnapshotter(ctx context.Context, snapshotter *internal.Snapshotter) {
 		if err != nil {
 			log.Printf("Could not take snapshot or upload to all targets: %v\n", err)
 		}
+		log.Printf("Snapshot ")
 		select {
 		case <-time.After(frequency):
 			continue

@@ -237,6 +237,10 @@ type uploaderStub struct {
 	uploadFails bool
 }
 
+func (stub *uploaderStub) Destination() string {
+	return ""
+}
+
 func (stub *uploaderStub) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {
 	stub.uploaded = true
 	if stub.uploadFails {

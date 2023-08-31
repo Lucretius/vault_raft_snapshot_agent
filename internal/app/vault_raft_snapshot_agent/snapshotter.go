@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -87,10 +88,10 @@ func (s *Snapshotter) uploadSnapshot(ctx context.Context, snapshot io.Reader) er
 
 	var errs error
 	for _, uploader := range s.uploaders {
-		err := uploader.Upload(ctx, snapshot, now, s.retainSnapshots)
-
-		if err != nil {
+		if err := uploader.Upload(ctx, snapshot, now, s.retainSnapshots); err != nil {
 			errs = multierr.Append(errs, fmt.Errorf("unable to upload snapshot: %s", err))
+		} else {
+			log.Printf("Successfully uploaded snapshot to %s\n", uploader.Destination())		
 		}
 	}
 

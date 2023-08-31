@@ -12,7 +12,7 @@ import (
 
 type GCPConfig struct {
 	Bucket string `validate:"required_if=Empty false"`
-	Empty bool
+	Empty  bool
 }
 
 type gcpUploader struct {
@@ -29,6 +29,10 @@ func newGCPUploader(config GCPConfig) (*gcpUploader, error) {
 	return &gcpUploader{
 		client.Bucket(config.Bucket),
 	}, nil
+}
+
+func (u *gcpUploader) Destination() string {
+	return fmt.Sprintf("gcp bucket")
 }
 
 func (u *gcpUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {

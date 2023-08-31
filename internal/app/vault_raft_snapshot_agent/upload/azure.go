@@ -14,7 +14,7 @@ type AzureConfig struct {
 	AccountName   string `validate:"required_if=Empty false"`
 	AccountKey    string `validate:"required_if=Empty false"`
 	ContainerName string `mapstructure:"container" validate:"required_if=Empty false"`
-	Empty bool
+	Empty         bool
 }
 
 type azureUploader struct {
@@ -38,6 +38,10 @@ func newAzureUploader(config AzureConfig) (*azureUploader, error) {
 		client,
 		config.ContainerName,
 	}, nil
+}
+
+func (u *azureUploader) Destination() string {
+	return fmt.Sprintf("azure container %s", u.containerName)
 }
 
 func (u *azureUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {

@@ -17,6 +17,7 @@ func (c UploadersConfig) HasUploaders() bool {
 }
 
 type Uploader interface {
+	Destination() string
 	Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error
 }
 

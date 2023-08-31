@@ -24,6 +24,10 @@ func newLocalUploader(config LocalConfig) (*localUploader, error) {
 	}, nil
 }
 
+func (u *localUploader) Destination() string {
+	return fmt.Sprintf("local path %s", u.path)
+}
+
 func (u *localUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {
 	fileName := fmt.Sprintf("%s/raft_snapshot-%d.snap", u.path, currentTs)
 	file, err := os.Create(fileName)
