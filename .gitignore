@@ -15,3 +15,5 @@
 # vendor/
 local/*
 main
+out/
+.build/

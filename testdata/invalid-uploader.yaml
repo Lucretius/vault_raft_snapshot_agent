@@ -1,0 +1,5 @@
+snapshots:
+  frequency: "1h"
+uploaders:
+  azure:
+    accountName: "test"

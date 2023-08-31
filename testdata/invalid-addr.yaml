@@ -1,0 +1,7 @@
+vault:
+  url: "invalid://uri"
+snapshots:
+  frequency: "1h"
+uploaders:
+  local:
+    path: .

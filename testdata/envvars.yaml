@@ -1,0 +1,8 @@
+vault:
+  auth:
+    token: "secret"
+uploaders:
+  aws:
+    endpoint: test-endpoint
+    region: test-region
+    bucket: test-bucket

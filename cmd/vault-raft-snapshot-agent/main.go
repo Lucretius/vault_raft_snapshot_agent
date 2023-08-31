@@ -1,9 +1,36 @@
+/*
+Vault Raft Snapshot Agent periodically takes snapshots of Vault's raft database.
+It uploads those snaphots to one or more storage locations like a local harddrive
+or an AWS S3 Bucket.
+
+Usage:
+
+    vault-raft-snapshot-agent [flags] [options]
+
+The flags are:
+
+    -v, -version
+		Prints version information and exits
+
+The options are:
+
+	-c -config <file>
+		Specifies the config-file to use. 
+
+If no config file is explicitly specified, the program looks for configuration-files
+with the name `snapshot` and the extensions supported by [viper]
+in the current working directory or in /etc/vault.d/snapshots.
+
+For details on how to configure the program see the [README]
+
+[viper]: https://github.com/spf13/viper
+[README]: https://github.com/Argelbargel/vault-raft-snapshot-agent/README.md
+*/
 package main
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -12,7 +39,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent"
+	internal "github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent"
 )
 
 var Version = "development"
@@ -28,18 +55,6 @@ func (qbf *quietBoolFlag) String() string {
 
 func (qbf *quietBoolFlag) GetDefaultText() string {
 	return ""
-}
-
-func listenForInterruptSignals() chan bool {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	done := make(chan bool, 1)
-
-	go func() {
-		<-sigs
-		done <- true
-	}()
-	return done
 }
 
 func main() {
@@ -69,7 +84,7 @@ func main() {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			runSnapshotter(ctx.Path("config"))
+			startSnapshotter(ctx.Path("config"))
 			return nil
 		},
 	}
@@ -85,115 +100,43 @@ Options:
 	}
 }
 
-func runSnapshotter(configFile cli.Path) {
-	done := listenForInterruptSignals()
-
-	c, err := vault_raft_snapshot_agent.ReadConfig(configFile)
+func startSnapshotter(configFile cli.Path) {
+	config, err := internal.ReadConfig(configFile)
 	if err != nil {
-		log.Fatalln("Configuration could not be found")
+		log.Fatalf("Could not read configuration file %s: %s\n", configFile, err)
 	}
 
-	snapshotter, err := vault_raft_snapshot_agent.NewSnapshotter(c)
+	snapshotter, err := internal.CreateSnapshotter(config)
 	if err != nil {
-		log.Fatalln("Cannot instantiate snapshotter.", err)
-	}
-	frequency, err := time.ParseDuration(c.Frequency)
-
-	if err != nil {
-		frequency = time.Hour
+		log.Fatalf("Cannot instantiate snapshotter: %s\n", err)
 	}
 
-	snapshotTimeout := 60 * time.Second
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	if c.SnapshotTimeout != "" {
-		snapshotTimeout, err = time.ParseDuration(c.SnapshotTimeout)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
 
-		if err != nil {
-			log.Fatalln("Unable to parse snapshot timeout", err)
-		}
-	}
+	runSnapshotter(ctx, snapshotter)
+}
+
+func runSnapshotter(ctx context.Context, snapshotter *internal.Snapshotter) {
+	internal.WatchConfigAndReconfigure(snapshotter)
 
 	for {
-		if snapshotter.TokenExpiration.Before(time.Now()) {
-			switch c.VaultAuthMethod {
-			case "k8s":
-				err := snapshotter.SetClientTokenFromK8sAuth(c)
-				if err != nil {
-					log.Println(err.Error())
-					log.Fatalln("Unable to set token for kubernetes auth")
-				}
-			case "token":
-				// Do nothing as vault agent will auto-renew the token
-			default:
-				err := snapshotter.SetClientTokenFromAppRole(c)
-				if err != nil {
-					log.Println(err.Error())
-					log.Fatalln("Unable to set token for app-role auth")
-				}
-			}
-		}
-		leader, err := snapshotter.API.Sys().Leader()
+		frequency, err := snapshotter.TakeSnapshot(ctx)
 		if err != nil {
-			log.Println(err.Error())
-			log.Fatalln("Unable to determine leader instance.  The snapshot agent will only run on the leader node.  Are you running this daemon on a Vault instance?")
-		}
-		leaderIsSelf := leader.IsSelf
-		if !leaderIsSelf {
-			log.Println("Not running on leader node, skipping.")
-		} else {
-			func() {
-				snapshot, err := os.CreateTemp("", "snapshot")
-
-				if err != nil {
-					log.Fatalln("Unable to create temporary snapshot file", err.Error())
-				}
-
-				defer os.Remove(snapshot.Name())
-
-				ctx, cancel := context.WithTimeout(context.Background(), snapshotTimeout)
-				defer cancel()
-				err = snapshotter.API.Sys().RaftSnapshotWithContext(ctx, snapshot)
-				if err != nil {
-					log.Fatalln("Unable to generate snapshot", err.Error())
-				}
-
-				_, err = snapshot.Seek(0, io.SeekStart)
-				if err != nil {
-					log.Fatalln("Unable to seek to start of snapshot file", err.Error())
-				}
-
-				now := time.Now().UnixNano()
-				if c.Local.Path != "" {
-					snapshotPath, err := snapshotter.CreateLocalSnapshot(snapshot, c, now)
-					logSnapshotError("local", snapshotPath, err)
-				}
-				if c.AWS.Bucket != "" {
-					snapshotPath, err := snapshotter.CreateS3Snapshot(snapshot, c, now)
-					logSnapshotError("aws", snapshotPath, err)
-				}
-				if c.GCP.Bucket != "" {
-					snapshotPath, err := snapshotter.CreateGCPSnapshot(snapshot, c, now)
-					logSnapshotError("gcp", snapshotPath, err)
-				}
-				if c.Azure.ContainerName != "" {
-					snapshotPath, err := snapshotter.CreateAzureSnapshot(snapshot, c, now)
-					logSnapshotError("azure", snapshotPath, err)
-				}
-			}()
+			log.Printf("Could not take snapshot or upload to all targets: %v\n", err)
 		}
 		select {
 		case <-time.After(frequency):
 			continue
-		case <-done:
+		case <-ctx.Done():
 			os.Exit(1)
 		}
-	}
-}
-
-func logSnapshotError(dest, snapshotPath string, err error) {
-	if err != nil {
-		log.Printf("Failed to generate %s snapshot to %s: %v\n", dest, snapshotPath, err)
-	} else {
-		log.Printf("Successfully created %s snapshot to %s\n", dest, snapshotPath)
 	}
 }

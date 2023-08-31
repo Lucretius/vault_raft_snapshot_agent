@@ -1,73 +1,82 @@
 package vault_raft_snapshot_agent
 
 import (
-    "encoding/json"
-    "log"
-    "os"
+	"fmt"
+	"log"
+	"time"
 
-    "github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/upload"
+	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/vault"
 )
 
-// Configuration is the overall config object
-type Configuration struct {
-    Address         string      `json:"addr"`
-    Retain          int64       `json:"retain"`
-    Frequency       string      `json:"frequency"`
-    SnapshotTimeout string 		`json:"timeout,omitempty"`
-    AWS         	S3Config 	`json:"aws_storage"`
-    Local           LocalConfig `json:"local_storage"`
-    GCP             GCPConfig   `json:"google_storage"`
-    Azure           AzureConfig `json:"azure_storage"`
-    RoleID          string      `json:"role_id"`
-    SecretID        string      `json:"secret_id"`
-	Token           string      `json:"token,omitempty"`
-	Approle         string      `json:"approle,omitempty"`
-    K8sAuthRole     string      `json:"k8s_auth_role,omitempty"`
-    K8sAuthPath     string      `json:"k8s_auth_path,omitempty"`
-    VaultAuthMethod string      `json:"vault_auth_method,omitempty"`
+type SnapshotterConfig struct {
+	Vault     vault.VaultClientConfig
+	Snapshots SnapshotConfig
+	Uploaders upload.UploadersConfig
 }
 
-// AzureConfig is the configuration for Azure blob snapshots
-type AzureConfig struct {
-    AccountName   string `json:"account_name"`
-    AccountKey    string `json:"account_key"`
-    ContainerName string `json:"container_name"`
+type SnapshotConfig struct {
+	Frequency time.Duration `default:"1h" mapstructure:",omitempty"`
+	Retain    int
+	Timeout   time.Duration `default:"60s" mapstructure:",omitempty"`
 }
 
-// GCPConfig is the configuration for GCP Storage snapshots
-type GCPConfig struct {
-    Bucket string `json:"bucket"`
-}
-
-// LocalConfig is the configuration for local snapshots
-type LocalConfig struct {
-    Path string `json:"path"`
-}
-
-// S3Config is the configuration for S3 snapshots
-type S3Config struct {
-    Uploader           *s3manager.Uploader
-    AccessKeyID        string `json:"access_key_id"`
-    SecretAccessKey    string `json:"secret_access_key"`
-    Endpoint           string `json:"s3_endpoint"`
-    Region             string `json:"s3_region"`
-    Bucket             string `json:"s3_bucket"`
-    KeyPrefix          string `json:"s3_key_prefix"`
-    SSE                bool   `json:"s3_server_side_encryption"`
-    StaticSnapshotName string `json:"s3_static_snapshot_name"`
-    S3ForcePathStyle   bool   `json:"s3_force_path_style"`
-}
+var parser rattlesnake = newRattlesnake("snapshot", "VRSA", "/etc/vault.d/", ".")
 
 // ReadConfig reads the configuration file
-func ReadConfig(file string) (*Configuration, error) {
-    cBytes, err := os.ReadFile(file)
-    if err != nil {
-        log.Fatalf("Cannot read configuration file: %v", err.Error())
-    }
-    c := &Configuration{}
-    err = json.Unmarshal(cBytes, &c)
-    if err != nil {
-        log.Fatalf("Cannot parse configuration file: %v", err.Error())
-    }
-    return c, nil
+func ReadConfig(file string) (SnapshotterConfig, error) {
+	config := SnapshotterConfig{}
+
+	err := parser.BindAllEnv(
+		map[string]string{
+			"vault.url":                        "VAULT_ADDR",
+			"uploaders.aws.credentials.key":    "AWS_ACCESS_KEY_ID",
+			"uploaders.aws.credentials.secret": "SECRET_ACCESS_KEY",
+		},
+	)
+	if err != nil {
+		return config, fmt.Errorf("could not bind environment-variables: %s", err)
+	}
+
+	if file != "" {
+		if err := parser.SetConfigFile(file); err != nil {
+			return config, err
+		}
+	}
+
+	if err := parser.ReadInConfig(); err != nil {
+		if parser.IsConfigurationNotFoundError(err) {
+			if file != "" {
+				return config, err
+			} else {
+				log.Printf("Could not find any configuration file, will create configuration based solely on environment...")
+			}
+		} else {
+			return config, err
+		}
+	}
+
+	if err := parser.Unmarshal(&config); err != nil {
+		return config, fmt.Errorf("could not unmarshal configuration: %s", err)
+	}
+
+	if !config.Uploaders.HasUploaders() {
+		return config, fmt.Errorf("no uploaders configured!")
+	}
+
+	return config, nil
+}
+
+func WatchConfigAndReconfigure(snapshotter *Snapshotter) {
+	parser.OnConfigChange(func() {
+		config := SnapshotterConfig{}
+
+		if err := parser.Unmarshal(&config); err != nil {
+			log.Printf("Ignoring configuration change as configuration in %s is invalid: %v", parser.ConfigFileUsed(), err)
+		}
+
+		if err := snapshotter.Reconfigure(config); err != nil {
+			log.Fatalf("Cound not reconfigure snapshotter from %s: %v", parser.ConfigFileUsed(), err)
+		}
+	})
 }

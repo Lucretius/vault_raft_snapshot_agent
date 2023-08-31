@@ -1,0 +1,7 @@
+vault:
+  auth:
+    kubernetes:
+      role: "test-role"
+uploaders:
+  local:
+    path: .

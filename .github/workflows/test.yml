@@ -1,0 +1,31 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "Checkout repository"
+      uses: actions/checkout@v3
+
+    - name: Setup go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: 'go.mod'
+        check-latest: true
+        cache: true
+
+    - name: Run tests
+      env:
+        VRSA_VAULT_AUTH_KUBERNETES_JWTPATH: ${{ runner.temp}}/vrsa-jwt
+      run: |
+        go test -v ./...
+

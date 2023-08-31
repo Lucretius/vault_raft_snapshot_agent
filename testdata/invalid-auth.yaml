@@ -1,0 +1,9 @@
+vault:
+  auth:
+    approle:
+      id: "test"
+snapshots:
+  frequency: "1h"
+uploaders:
+  local:
+    path: .

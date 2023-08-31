@@ -5,15 +5,6 @@
 
 Vault Raft Snapshot Agent is a Go binary that is meant to run alongside every member of a [Vault](https://www.vaultproject.io/) cluster and will take periodic snapshots of the Raft database and write it to the desired location.  It's configuration is meant to somewhat parallel that of the [Consul Snapshot Agent](https://www.consul.io/docs/commands/snapshot/agent.html) so many of the same configuration properties you see there will be present here.
 
-## "High Availability" explained
-It works in an "HA" way as follows:
-1) Each running daemon checks the IP address of the machine its running on.
-2) If this IP address matches that of the leader node, it will be responsible for performing snapshotting.
-3) The other binaries simply continue checking, on each snapshot interval, to see if they have become the leader.
-
-In this way, the daemon will always run on the leader Raft node.
-
-Another way to do this, which would allow us to run the snapshot agent anywhere, is to simply have the daemons form their own Raft cluster, but this approach seemed much more cumbersome.
 
 ## Running
 
@@ -23,8 +14,10 @@ You can run the agent with the supplied container-image, e.g. via docker:
 docker run -v <path to snapshot.json>:/etc/vault.d/snapshot.json" ghcr.io/argelbargel/vault-raft-snapshot-agent:latest
 ```
 
+
 ### Helm-Chart
 If you're running on kubernetes, you can use the provided [Helm-Charts](https://argelbargel.github.io/vault-raft-snapshot-agent-helm/) to install Vault Raft Snapshot Agent into your cluster.
+
 
 ### systemd-service
 The recommended way of running this daemon is using systemctl, since it handles restarts and failure scenarios quite well.  To learn more about systemctl, checkout [this article](https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units).  begin, create the following file at `/etc/systemd/system/snapshot.service`:
@@ -64,103 +57,83 @@ If your configuration is right and Vault is running on the same host as the agen
 
 `Not running on leader node, skipping.` or `Successfully created <type> snapshot to <location>`, depending on if the daemon runs on the leader's host or not.
 
+
 ## Configuration
 
 The default location of the configuration-file is `/etc/vault.d/snapshots.json`. You may change this path by running the agent with `vault-raft-snapshot-agent --config <path>`.
-
-### Global configuration options
-`addr` The address of the Vault cluster.  This is used to check the Vault cluster leader IP, as well as generate snapshots. Defaults to "https://127.0.0.1:8200".
-
-`retain` The number of backups to retain.
-
-`frequency` How often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
-
-`timeout` Timeout for creating snapshots. Examples: `30s`, `1h`. Default: `60s`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units.
-
-#### Default authentication mode
-`role_id` Specifies the role_id used to call the Vault API.  See the authentication steps below.
-
-`secret_id` Specifies the secret_id used to call the Vault API.
-
-`approle` Specifies the approle name used to login.  Defaults to "approle".
+Vault Raft Snapshot Agent uses [viper](https://github.com/spf13/viper) as configuration-backend so you can write your configuration in either json, yaml or toml.
 
 
-#### Kubernetes authentication mode
-Incase we're running the application under kubernetes, we can use Vault's Kubernetes Auth
-as below. Read more on [kubernetes auth mode](https://www.vaultproject.io/docs/auth/kubernetes)
+### Example configuration (yaml)
+```
+vault:
+  # Url of the (leading) vault-server
+  url: http://vault-server:8200
+  auth:
+    # configures kubernetes auth
+    kubernetes:
+      role: "test-role"
+snapshots:
+  # configures how often snapshots are made, default 1h
+  frequency: "4h"
+  # configures how many snapshots are retained, default 0
+  retain: 10
+uploaders:
+  # configures local storage of snapshots
+  local:
+    path: /snapshots
+```
 
-`vault_auth_method` Set it to "k8s", otherwise, approle will be chosen
-
-`k8s_auth_role` Specifies vault k8s auth role
-
-`k8s_auth_path` Specifies vault k8s auth path
-
-#### Token authentication mode
-Authenticates with vault using a supplied token.
-
-`vault_auth_method` Set it to "token", otherwise, approle will be chosen
-
-`token` Specifies the vault token
-
-### Storage options
-
-Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local_storage` and `aws_storage` will write to both locations.
-
-`local_storage` - Object for writing to a file on disk.
-
-`aws_storage` - Object for writing to an S3 bucket (Support AWS S3 but also S3 Compatible Storage).
-
-`google_storage` - Object for writing to GCS.
-
-`azure_storage` - Object for writing to Azure.
-
-#### Local Storage
-
-`path` - Fully qualified path, not including file name, for where the snapshot should be written.  i.e. /etc/raft/snapshots
-
-#### AWS Storage
-
-`access_key_id` - Recommended to use the standard `AWS_ACCESS_KEY_ID` env var, but its possible to specify this in the config
-
-`secret_access_key` - Recommended to use the standard `SECRET_ACCESS_KEY` env var, but its possible to specify this in the config
-
-`s3_endpoint` - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
-
-`s3_force_path_style` - Needed if your S3 Compatible storage support only path-style or you would like to use S3's FIPS Endpoint.
-
-`s3_region` - S3 region as is required for programmatic interaction with AWS
-
-`s3_bucket` - bucket to store snapshots in (required for AWS writes to work)
-
-`s3_key_prefix` - Prefix to store s3 snapshots in.  Defaults to empty string
-
-`s3_server_side_encryption` -  Encryption is **off** by default.  Set to true to turn on AWS' AES256 encryption.  Support for AWS KMS keys is not currently supported.
-
-`s3_static_snapshot_name` - Use a single, static key for s3 snapshots as opposed to autogenerated timestamped-based ones.  Unless S3 versioning is used, this means there will only ever be a single point-in-time snapshot stored in S3.
-
-#### Google Storage
-
-`bucket` - The Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
-
-#### Azure Storage
-
-`account_name` - The account name of the storage account
-
-`account_key` - The account key of the storage account
-
-`container_name` The name of the blob container to write to
+(for a complete example with all configuration-options see [complete.yaml](./testdata/complete.yaml))
 
 
-## Authentication
+### Environment variables
+Vault Raft Snapshot Agent supports configuration with environment variables. For some common options there are shortcuts defined:
+- `VAULT_ADDR` configures the url to the vault-server (same as `vault.url`)
+- `AWS_ACCESS_KEY_ID` configures the access key for the AWS uploader (same as `uploaders.aws.credentials.key`)
+- `SECRET_ACCESS_KEY` configures the access secret for the AWS uploader (same as `uploaders.aws.credentials.secret`)
+
+Any other option can be set by prefixing `VRSA_` to the uppercased path to the key and replacing `.` with `_`. For example `VRSA_SNAPSHOTS_FREQUENCY=<value>` configures the snapshot-frequency and `VRSA_VAULT_AUTH_TOKEN=<value>` configures the token authentication for vault.
+
+_Options specified via environment-variables take precedence before the values specified in the configuration file!_
+
+### Vault configuration
+```
+vault:
+  url_ <http(s)-url to vault-server>
+  insecure: <true|false>
+```
+
+- `url` (default: https://127.0.0.1:8200) - specifies the url of the vault-server. 
+  
+  **The URL should point be the cluster-leader, otherwise no snapshots get taken until the server the url points to is elected leader!**  When running Vault on Kubernetes installed by the [default helm-chart](https://developer.hashicorp.com/vault/docs/platform/k8s/helm), this should be `http(s)://vault-active.<vault-namespace>.svc.cluster.local:<vault-server service-port>`. 
+  
+  You can alternativly specify the url with the environment-variable `VAULT_ADDR`
 
 
-### Default authentication mode
 
-You must do some quick initial setup prior to being able to use the Snapshot Agent.  This involves the following:
+- `insecure` (default: false) - specifies whether insecure https connections are allowed or not. Set to `true` when you use self-signed certificates
 
-`vault login` with an admin user.
-Create the following policy `vault policy write snapshot ./my_policies/snapshot_policy.hcl`
- where `snapshot_policy.hcl` is:
+
+#### Vault authentication
+```
+vault:
+  auth:
+    # only one of these options should be used!
+    approle:
+      id: "<approle-id>
+      secret: "<approle-secret-id>"
+    kubernetes:
+      role: "test"
+    token: <auth-token>
+```
+
+Only one of the following authentication options should be specified. If multiple options are specified *one* of them is used with the following priority: `approle`, `kubernetes`, `token`. If no option is specified, Vault Raft Snapshot Agent tries to access vault unauthenticated (which should fail outside of test- or develop-environments)
+
+To allow Vault Raft Snapshot Agent to take snapshots, you must add a policy that allows read-access to the snapshot-apis. This involves the following:
+
+1. `vault login` with an admin user.
+2. Create the following policy `vault policy write snapshots ./my_policies/snapshots.hcl` where `snapshots.hcl` is:
 
 ```hcl
 path "/sys/storage/raft/snapshot"
@@ -169,23 +142,114 @@ path "/sys/storage/raft/snapshot"
 }
 ```
 
-Then run:
-```
-vault write auth/approle/role/snapshot token_policies="snapshot"
-vault read auth/approle/role/snapshot/role-id
-vault write -f auth/approle/role/snapshot/secret-id
-```
+This policy must be associated with the app- or kubernetes role you specify in you're configuration (see below).
 
 and copy your secret and role ids, and place them into the snapshot file.  The snapshot agent will use them to request client tokens, so that it can interact with your Vault cluster.  The above policy is the minimum required policy to be able to generate snapshots.  The snapshot agent will automatically renew the token when it is going to expire.
 
-The AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials.
 
-To learn more about AppRole's and why this project chose to use them, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
+##### AppRole authentication (`approle`)
+An AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials. To learn more about AppRole's, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
+
+- `id` (required) - specifies the role_id used to call the Vault API.  See the authentication steps below
+- `secret` (required) - specifies the secret_id used to call the Vault API
+- `path` (default: approle) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+To allow the App-Role access to the snapshots you should run the following commands on your vault-cluster:
+```
+vault write auth/approle/role/snapshot token_policies="snapshots"
+vault read auth/approle/role/snapshot/<your role-id>
+vault write -f auth/approle/role/snapshot/<your secret-id>
+```
 
 
-### Kubernetes authentication mode
+##### Kubernetes authentication
+To enable Kubernetes authentication mode, you should follow the steps from [the Vault docs](https://www.vaultproject.io/docs/auth/kubernetes#configuration) and create the appropriate policies and roles.
 
-To Enable Kubernetes authentication mode, we should follow these steps from [the Vault docs](https://www.vaultproject.io/docs/auth/kubernetes#configuration)
+- `role` (required) - specifies vault k8s auth role
+- `path` (default: kubernetes) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+- `jwtPath` (default: /var/run/secrets/kubernetes.io/serviceaccount/token) - specifies the path to the file with the JWT-Token for the kubernetes Service-Account
+
+To allow kubernetes access to the snapshots you should run the following commands on your vault-cluster:
+```
+  kubectl -n <your-vault-namespace> exec -it <vault-pod-name> -- vault write auth/<kubernetes.path>/role/<kubernetes.role> bound_service_account_names=*  bound_service_account_namespaces=<namespace of your vault-raft-snapshot-agent-pod> policies=snapshots ttl=24h
+```
+Depending on your setup you can restrict access to specific service-account-names and/or namespaces.
+
+
+##### Token authentication
+- `token` (required) - specifies the token used to login
+
+
+### Snapshot configuration
+```
+snapshots:
+  frequency: "<duration>"
+  timeout: "<duration>"
+  retain: <int>
+```
+
+- `frequency` (default: 1h) - how often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
+- `retain` (default: 0)  -the number of backups to retain. `0` means all snapshots will be retained
+- `timeout` (default: 60s) - timeout for creating snapshots. Examples: `30s`, `1h`. Default: `60s`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
+
+
+### Uploader configuration
+```
+uploaders:
+  # you can configure any of these options (exactly once)
+  aws:
+    region: <region>
+    bucket: <bucket>
+    credentials:
+      key: <key>
+      secret: <secret>
+  azure:
+    accountName: <name>
+    accountKey: <key>
+    container: <container>
+  google:
+    bucket: <bucket>
+  local:
+    path: <path>
+```
+
+Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local` and `aws` will write to both locations. Each options can be specified exactly one - thus is is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-entries.
+
+
+#### AWS S3 Upload
+- `region` (required) - S3 region as is required for programmatic interaction with AWS
+- `bucket` (required) - bucket to store snapshots in (required for AWS writes to work)
+- `keyPrefix` (default: "") - prefix to store s3 snapshots in.  Defaults to empty string
+- `endpoint` (default: "") - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
+- `useServerSideEncryption` (default: false) -  Encryption is **off** by default. Set to true to turn on AWS' AES256 encryption. Support for AWS KMS keys is not currently supported.
+- `forcePathStyle` (default: false) - Needed if your S3 Compatible storage support only path-style or you would like to use S3's FIPS Endpoint.
+
+
+##### AWS authentication
+```
+uploaders:
+  aws:
+    credentials:
+      key: <key>
+      secret: <secret>
+```
+- `key` (required) - specifies the access key. It's recommended to use the standard `AWS_ACCESS_KEY_ID` env var, though
+- `secret` (required) - specifies the secret It's recommended to use the standard `SECRET_ACCESS_KEY` env var, though
+
+
+#### Azure Storage
+- `accountName` (required) - the account name of the storage account
+- `accountKey` (required) - the account key of the storage account
+- `containerName` (required) - the name of the blob container to write to
+
+
+#### Google Storage
+`bucket` (required) - the Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
+
+
+#### Local Storage
+`path` (required) - fully qualified path, not including file name, for where the snapshot should be written.  i.e. `/raft/snapshots`
+
 
 ## License
 - Source code is licensed under MIT

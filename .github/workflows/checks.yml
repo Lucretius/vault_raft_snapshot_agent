@@ -1,0 +1,33 @@
+name: Run checks
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches:
+    - '**'
+    tags-ignore:
+    - "**"
+    paths-ignore:
+    - "README.md"
+    - "**Dockerfile"
+    - ".github/workflows/lint.yml"
+    - ".github/workflows/release*.yml"
+  pull_request:
+    paths-ignore:
+    - "Dockerfile"
+    - "**README.md"
+    - ".github/workflows/lint.yml"
+    - ".github/workflows/release*.yml"
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
+
