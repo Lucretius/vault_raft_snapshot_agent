@@ -64,7 +64,7 @@ The default location of the configuration-file is `/etc/vault.d/snapshots.json`.
 Vault Raft Snapshot Agent uses [viper](https://github.com/spf13/viper) as configuration-backend so you can write your configuration in either json, yaml or toml.
 
 
-### Example configuration (yaml)
+#### Example configuration (yaml)
 ```
 vault:
   # Url of the (leading) vault-server
@@ -115,21 +115,7 @@ vault:
 - `insecure` (default: false) - specifies whether insecure https connections are allowed or not. Set to `true` when you use self-signed certificates
 
 
-#### Vault authentication
-```
-vault:
-  auth:
-    # only one of these options should be used!
-    approle:
-      id: "<approle-id>
-      secret: "<approle-secret-id>"
-    kubernetes:
-      role: "test"
-    token: <auth-token>
-```
-
-Only one of the following authentication options should be specified. If multiple options are specified *one* of them is used with the following priority: `approle`, `kubernetes`, `token`. If no option is specified, Vault Raft Snapshot Agent tries to access vault unauthenticated (which should fail outside of test- or develop-environments)
-
+### Vault authentication
 To allow Vault Raft Snapshot Agent to take snapshots, you must add a policy that allows read-access to the snapshot-apis. This involves the following:
 
 1. `vault login` with an admin user.
@@ -142,14 +128,28 @@ path "/sys/storage/raft/snapshot"
 }
 ```
 
-This policy must be associated with the app- or kubernetes role you specify in you're configuration (see below).
+The above policy is the minimum required policy to be able to generate snapshots. This policy must be associated with the app- or kubernetes-role you specify in you're configuration (see below).
 
-and copy your secret and role ids, and place them into the snapshot file.  The snapshot agent will use them to request client tokens, so that it can interact with your Vault cluster.  The above policy is the minimum required policy to be able to generate snapshots.  The snapshot agent will automatically renew the token when it is going to expire.
+Only one of the following authentication options should be specified. If multiple options are specified *one* of them is used with the following priority: `approle`, `kubernetes`, `token`. If no option is specified, Vault Raft Snapshot Agent tries to access vault unauthenticated (which should fail outside of test- or develop-environments)
+
+When using App-Role or Kubernetes authentication Vault Raft Snapshot Agent automatically renews the authentication when it expires.
 
 
-##### AppRole authentication (`approle`)
+#### AppRole authentication (`approle`)
+
 An AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials. To learn more about AppRole's, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
 
+ 
+##### Minimal configuration
+```
+vault:
+  auth:
+    approle:
+      id: "<role-id>
+      secret: "<secret-id>"
+```
+
+##### Configuration options
 - `id` (required) - specifies the role_id used to call the Vault API.  See the authentication steps below
 - `secret` (required) - specifies the secret_id used to call the Vault API
 - `path` (default: approle) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
@@ -157,14 +157,23 @@ An AppRole allows the snapshot agent to automatically rotate tokens to avoid lon
 To allow the App-Role access to the snapshots you should run the following commands on your vault-cluster:
 ```
 vault write auth/approle/role/snapshot token_policies="snapshots"
-vault read auth/approle/role/snapshot/<your role-id>
-vault write -f auth/approle/role/snapshot/<your secret-id>
+vault read auth/approle/role/snapshot/<role-id>
+vault write -f auth/approle/role/snapshot/<secret-id>
 ```
 
 
-##### Kubernetes authentication
+#### Kubernetes authentication
 To enable Kubernetes authentication mode, you should follow the steps from [the Vault docs](https://www.vaultproject.io/docs/auth/kubernetes#configuration) and create the appropriate policies and roles.
 
+##### Minimal configuration
+```
+vault:
+  auth:
+    kubernetes:
+      role: "test"
+```
+
+##### Configuration options 
 - `role` (required) - specifies vault k8s auth role
 - `path` (default: kubernetes) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
 - `jwtPath` (default: /var/run/secrets/kubernetes.io/serviceaccount/token) - specifies the path to the file with the JWT-Token for the kubernetes Service-Account
@@ -176,7 +185,15 @@ To allow kubernetes access to the snapshots you should run the following command
 Depending on your setup you can restrict access to specific service-account-names and/or namespaces.
 
 
-##### Token authentication
+#### Token authentication
+##### Minimal configuration
+```
+vault:
+  auth:
+    token: <token>
+```
+
+##### Configuration options
 - `token` (required) - specifies the token used to login
 
 
