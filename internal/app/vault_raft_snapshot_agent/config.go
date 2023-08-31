@@ -24,10 +24,10 @@ type SnapshotConfig struct {
 var parser rattlesnake = newRattlesnake("snapshot", "VRSA", "/etc/vault.d/", ".")
 
 // ReadConfig reads the configuration file
-func ReadConfig(file string) (SnapshotterConfig, error) {
-	config := SnapshotterConfig{}
+func ReadConfig(file string) (config SnapshotterConfig, err error) {
+	config = SnapshotterConfig{}
 
-	err := parser.BindAllEnv(
+	err = parser.BindAllEnv(
 		map[string]string{
 			"vault.url":                        "VAULT_ADDR",
 			"uploaders.aws.credentials.key":    "AWS_ACCESS_KEY_ID",
@@ -54,6 +54,10 @@ func ReadConfig(file string) (SnapshotterConfig, error) {
 		} else {
 			return config, err
 		}
+	}
+
+	if usedConfigFile := parser.ConfigFileUsed(); usedConfigFile != "" {
+		log.Printf("Using configuration from %s...\n", usedConfigFile)
 	}
 
 	if err := parser.Unmarshal(&config); err != nil {

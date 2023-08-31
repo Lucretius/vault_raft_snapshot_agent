@@ -7,6 +7,7 @@ RUN chmod +x /bin/build.sh
 
 VOLUME /build
 VOLUME /work
+VOLUME /dist
 VOLUME /etc/vault.d/
 
 ENV BUILDPLATFORM=$TARGETPLATFORM

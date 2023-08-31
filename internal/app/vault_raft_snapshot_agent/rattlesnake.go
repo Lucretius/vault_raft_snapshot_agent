@@ -52,9 +52,9 @@ func (r rattlesnake) SetConfigFile(file string) error {
 		if err != nil {
 			return fmt.Errorf("could not build absolute path to config-file %s: %s", file, err)
 		}
+		r.v.SetConfigFile(file)
 	}
 
-	r.v.SetConfigFile(file)
 	return nil
 }
 

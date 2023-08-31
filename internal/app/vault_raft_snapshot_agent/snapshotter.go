@@ -71,7 +71,7 @@ func (s *Snapshotter) TakeSnapshot(ctx context.Context) (time.Duration, error) {
 
 	err = s.client.TakeSnapshot(ctx, snapshot)
 	if err != nil {
-		return s.frequency, fmt.Errorf("unable to generate snapshot: %s", err)
+		return s.frequency, err
 	}
 
 	_, err = snapshot.Seek(0, io.SeekStart)

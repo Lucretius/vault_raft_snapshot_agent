@@ -48,7 +48,7 @@ func (c *VaultClient) TakeSnapshot(ctx context.Context, writer io.Writer) error 
 
 	leader, err := c.api.IsLeader()
 	if err != nil {
-		return fmt.Errorf("unable to determine leader instance from %s: %v", c.Url, err)
+		return fmt.Errorf("unable to determine leader status for %s: %v", c.Url, err)
 	}
 
 	if !leader {
@@ -62,7 +62,7 @@ func (c *VaultClient) refreshAuth() error {
 	if c.auth != nil && c.tokenExpiration.Before(time.Now()) {
 		tokenExpiration, err := c.auth.Refresh(c.api.AuthAPI())
 		if err != nil {
-			return fmt.Errorf("could not refresh auth from %s: %v", c.Url, err)
+			return fmt.Errorf("could not refresh auth: %s", err)
 		}
 		c.tokenExpiration = tokenExpiration
 	}

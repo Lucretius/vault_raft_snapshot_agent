@@ -5,17 +5,17 @@ or an AWS S3 Bucket.
 
 Usage:
 
-    vault-raft-snapshot-agent [flags] [options]
+	vault-raft-snapshot-agent [flags] [options]
 
 The flags are:
 
-    -v, -version
-		Prints version information and exits
+	    -v, -version
+			Prints version information and exits
 
 The options are:
 
 	-c -config <file>
-		Specifies the config-file to use. 
+		Specifies the config-file to use.
 
 If no config file is explicitly specified, the program looks for configuration-files
 with the name `snapshot` and the extensions supported by [viper]
@@ -78,8 +78,7 @@ func main() {
 			&cli.PathFlag{
 				Name:    "config",
 				Aliases: []string{"c"},
-				Value:   "/etc/vault.d/snapshot.json",
-				Usage:   "Load configuration from `FILE`",
+				Usage:   "Load configuration from `FILE`. If not specified, configuration is searched in /etc/vault.d and the current working directory",
 				EnvVars: []string{"VAULT_RAFT_SNAPSHOT_AGENT_CONFIG_FILE"},
 			},
 		},
@@ -103,7 +102,7 @@ Options:
 func startSnapshotter(configFile cli.Path) {
 	config, err := internal.ReadConfig(configFile)
 	if err != nil {
-		log.Fatalf("Could not read configuration file %s: %s\n", configFile, err)
+		log.Fatalf("Could not read configuration: %s\n", err)
 	}
 
 	snapshotter, err := internal.CreateSnapshotter(config)
