@@ -215,7 +215,6 @@ snapshots:
 uploaders:
   # you can configure any of these options (exactly once)
   aws:
-    region: <region>
     bucket: <bucket>
     credentials:
       key: <key>
@@ -234,8 +233,8 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 
 #### AWS S3 Upload
-- `region` (required) - S3 region as is required for programmatic interaction with AWS
 - `bucket` (required) - bucket to store snapshots in (required for AWS writes to work)
+- `region` (default: "") - S3 region if it is required 
 - `keyPrefix` (default: "") - prefix to store s3 snapshots in.  Defaults to empty string
 - `endpoint` (default: "") - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
 - `useServerSideEncryption` (default: false) -  Encryption is **off** by default. Set to true to turn on AWS' AES256 encryption. Support for AWS KMS keys is not currently supported.

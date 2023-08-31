@@ -17,10 +17,10 @@ import (
 
 type AWSConfig struct {
 	Credentials             AWSCredentialsConfig `default:"{\"Empty\": true}"`
-	Region                  string               `validate:"required_if=Empty false"`
 	Bucket                  string               `validate:"required_if=Empty false"`
 	KeyPrefix               string               `mapstructure:",omitifempty"`
 	Endpoint                string               `mapstructure:",omitifempty"`
+	Region                  string
 	UseServerSideEncryption bool
 	ForcePathStyle          bool
 	Empty                   bool
@@ -74,7 +74,7 @@ func newAWSUploader(config AWSConfig) (*awsUploader, error) {
 }
 
 func (u *awsUploader) Destination() string {
-	return fmt.Sprintf("aws s3 bucket %s", u.bucket)
+	return fmt.Sprintf("aws s3 bucket %s ", u.bucket)
 }
 
 func (u *awsUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {

@@ -16,7 +16,8 @@ type GCPConfig struct {
 }
 
 type gcpUploader struct {
-	gcpBucket *storage.BucketHandle
+	destination string
+	bucket      *storage.BucketHandle
 }
 
 func newGCPUploader(config GCPConfig) (*gcpUploader, error) {
@@ -27,17 +28,18 @@ func newGCPUploader(config GCPConfig) (*gcpUploader, error) {
 	}
 
 	return &gcpUploader{
+		fmt.Sprintf("gcp bucket %s", config.Bucket),
 		client.Bucket(config.Bucket),
 	}, nil
 }
 
 func (u *gcpUploader) Destination() string {
-	return fmt.Sprintf("gcp bucket")
+	return u.destination
 }
 
 func (u *gcpUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {
 	fileName := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
-	obj := u.gcpBucket.Object(fileName)
+	obj := u.bucket.Object(fileName)
 	w := obj.NewWriter(context.Background())
 
 	_, err := io.Copy(w, reader)
@@ -63,7 +65,7 @@ func (u *gcpUploader) Upload(ctx context.Context, reader io.Reader, currentTs in
 		snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(retain)]
 
 		for _, ss := range snapshotsToDelete {
-			obj := u.gcpBucket.Object(ss.Name)
+			obj := u.bucket.Object(ss.Name)
 			err := obj.Delete(ctx)
 			if err != nil {
 				return fmt.Errorf("error deleting snapshot from gcp: %w", err)
@@ -78,7 +80,7 @@ func (u *gcpUploader) listUploadedSnapshotsAscending(ctx context.Context, keyPre
 	var result []storage.ObjectAttrs
 
 	query := &storage.Query{Prefix: keyPrefix}
-	it := u.gcpBucket.Objects(ctx, query)
+	it := u.bucket.Objects(ctx, query)
 
 	for {
 		attrs, err := it.Next()
