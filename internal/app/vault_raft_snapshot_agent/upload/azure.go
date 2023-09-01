@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
@@ -17,12 +16,12 @@ type AzureConfig struct {
 	Empty         bool
 }
 
-type azureUploader struct {
-	azureUploader *azblob.Client
-	containerName string
+type azureUploaderImpl struct {
+	client    *azblob.Client
+	container string
 }
 
-func newAzureUploader(config AzureConfig) (*azureUploader, error) {
+func createAzureUploader(config AzureConfig) (*uploader[*container.BlobItem], error) {
 	credential, err := azblob.NewSharedKeyCredential(config.AccountName, config.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials for azure: %w", err)
@@ -34,57 +33,52 @@ func newAzureUploader(config AzureConfig) (*azureUploader, error) {
 		return nil, fmt.Errorf("failed to create azure client: %w", err)
 	}
 
-	return &azureUploader{
-		client,
-		config.ContainerName,
+	return &uploader[*container.BlobItem]{
+		azureUploaderImpl{
+			client:    client,
+			container: config.ContainerName,
+		},
 	}, nil
 }
 
-func (u *azureUploader) Destination() string {
-	return fmt.Sprintf("azure container %s", u.containerName)
+func (u azureUploaderImpl) Destination() string {
+	return fmt.Sprintf("azure container %s", u.container)
 }
 
-func (u *azureUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {
-	name := fmt.Sprintf("raft_snapshot-%d.snap", currentTs)
-	_, err := u.azureUploader.UploadStream(ctx, u.containerName, name, reader, &azblob.UploadStreamOptions{
+// nolint:unused
+// implements interface uploaderImpl
+func (u azureUploaderImpl) uploadSnapshot(ctx context.Context, name string, data io.Reader) error {
+	uploadOptions := &azblob.UploadStreamOptions{
 		BlockSize:   4 * 1024 * 1024,
 		Concurrency: 16,
-	})
-
-	if err != nil {
-		return fmt.Errorf("error uploading snapshot to azure: %w", err)
 	}
 
-	if retain > 0 {
-		existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx, "raft_snapshot-")
-
-		if err != nil {
-			return fmt.Errorf("error getting existing snapshots from azure: %w", err)
-		}
-
-		if len(existingSnapshots)-int(retain) <= 0 {
-			return nil
-		}
-
-		blobsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(retain)]
-
-		for _, b := range blobsToDelete {
-			_, err := u.azureUploader.DeleteBlob(ctx, u.containerName, *b.Name, nil)
-			if err != nil {
-				return fmt.Errorf("error deleting snapshot %s from azure: %w", *b.Name, err)
-			}
-		}
+	if _, err := u.client.UploadStream(ctx, u.container, name, data, uploadOptions); err != nil {
+		return err
 	}
+
 	return nil
 }
 
-func (u *azureUploader) listUploadedSnapshotsAscending(ctx context.Context, keyPrefix string) ([]*container.BlobItem, error) {
+// nolint:unused
+// implements interface uploaderImpl
+func (u azureUploaderImpl) deleteSnapshot(ctx context.Context, snapshot *container.BlobItem) error {
+	if _, err := u.client.DeleteBlob(ctx, u.container, *snapshot.Name, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// nolint:unused
+// implements interface uploaderImpl
+func (u azureUploaderImpl) listSnapshots(ctx context.Context, prefix string, ext string) ([]*container.BlobItem, error) {
 	var results []*container.BlobItem
 
 	var maxResults int32 = 500
 
-	pager := u.azureUploader.NewListBlobsFlatPager(u.containerName, &azblob.ListBlobsFlatOptions{
-		Prefix:     &keyPrefix,
+	pager := u.client.NewListBlobsFlatPager(u.container, &azblob.ListBlobsFlatOptions{
+		Prefix:     &prefix,
 		MaxResults: &maxResults,
 	})
 
@@ -92,45 +86,17 @@ func (u *azureUploader) listUploadedSnapshotsAscending(ctx context.Context, keyP
 		resp, err := pager.NextPage(ctx)
 
 		if err != nil {
-			return results, fmt.Errorf("error paging blobs on azure: %w", err)
+			return results, err
 		}
 
 		results = append(results, resp.Segment.BlobItems...)
 	}
 
-	timestamp := func(o1, o2 *container.BlobItem) bool {
-		return o1.Properties.LastModified.Before(*o2.Properties.LastModified)
-	}
-
-	azureBy(timestamp).Sort(results)
-
 	return results, nil
 }
 
-// implementation of Sort interface for s3 objects
-type azureBy func(f1, f2 *container.BlobItem) bool
-
-func (by azureBy) Sort(objects []*container.BlobItem) {
-	fs := &azObjectSorter{
-		objects: objects,
-		by:      by, // The Sort method's receiver is the function (closure) that defines the sort order.
-	}
-	sort.Sort(fs)
-}
-
-type azObjectSorter struct {
-	objects []*container.BlobItem
-	by      azureBy
-}
-
-func (s *azObjectSorter) Len() int {
-	return len(s.objects)
-}
-
-func (s *azObjectSorter) Less(i, j int) bool {
-	return s.by(s.objects[i], s.objects[j])
-}
-
-func (s *azObjectSorter) Swap(i, j int) {
-	s.objects[i], s.objects[j] = s.objects[j], s.objects[i]
+// nolint:unused
+// implements interface uploaderImpl
+func (u azureUploaderImpl) compareSnapshots(a, b *container.BlobItem) int {
+	return a.Properties.LastModified.Compare(*b.Properties.LastModified)
 }

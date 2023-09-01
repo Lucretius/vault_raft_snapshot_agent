@@ -1,10 +1,10 @@
 package auth
 
 type AppRoleAuthConfig struct {
-	Path     string `default:"approle" mapstructure:",omitempty"`
+	Path     string `default:"approle"`
 	RoleId   string `mapstructure:"id" validate:"required_if=Empty false"`
 	SecretId string `mapstructure:"secret" validate:"required_if=Empty false"`
-	Empty    bool	`default:"-"`
+	Empty    bool	
 }
 
 func createAppRoleAuth(config AppRoleAuthConfig) authBackend {

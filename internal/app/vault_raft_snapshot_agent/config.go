@@ -3,23 +3,7 @@ package vault_raft_snapshot_agent
 import (
 	"fmt"
 	"log"
-	"time"
-
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/upload"
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/vault"
 )
-
-type SnapshotterConfig struct {
-	Vault     vault.VaultClientConfig
-	Snapshots SnapshotConfig
-	Uploaders upload.UploadersConfig
-}
-
-type SnapshotConfig struct {
-	Frequency time.Duration `default:"1h" mapstructure:",omitempty"`
-	Retain    int
-	Timeout   time.Duration `default:"60s" mapstructure:",omitempty"`
-}
 
 var parser rattlesnake = newRattlesnake("snapshot", "VRSA", "/etc/vault.d/", ".")
 

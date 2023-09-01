@@ -35,7 +35,10 @@ require (
 require github.com/hashicorp/vault/api v1.9.2
 
 // helpers
-require go.uber.org/multierr v1.11.0
+require (
+	github.com/thoas/go-funk v0.9.3
+	go.uber.org/multierr v1.11.0
+)
 
 // ensure up-to-date versions (because of known vulnerabilities etc.)
 require golang.org/x/crypto v0.12.0 // indirect

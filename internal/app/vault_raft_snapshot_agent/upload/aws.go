@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,7 +31,7 @@ type AWSCredentialsConfig struct {
 	Empty  bool
 }
 
-type awsUploader struct {
+type awsUploaderImpl struct {
 	client    *s3.Client
 	uploader  *manager.Uploader
 	keyPrefix string
@@ -40,7 +39,7 @@ type awsUploader struct {
 	sse       bool
 }
 
-func newAWSUploader(config AWSConfig) (*awsUploader, error) {
+func createAWSUploader(config AWSConfig) (*uploader[s3Types.Object], error) {
 	clientConfig, err := awsConfig.LoadDefaultConfig(context.Background(), awsConfig.WithRegion(config.Region))
 
 	if err != nil {
@@ -64,62 +63,59 @@ func newAWSUploader(config AWSConfig) (*awsUploader, error) {
 		keyPrefix = fmt.Sprintf("%s/", config.KeyPrefix)
 	}
 
-	return &awsUploader{
-		client,
-		manager.NewUploader(client),
-		keyPrefix,
-		config.Bucket,
-		config.UseServerSideEncryption,
+	return &uploader[s3Types.Object]{
+		awsUploaderImpl{
+			client:    client,
+			uploader:  manager.NewUploader(client),
+			keyPrefix: keyPrefix,
+			bucket:    config.Bucket,
+			sse:       config.UseServerSideEncryption,
+		},
 	}, nil
 }
 
-func (u *awsUploader) Destination() string {
+func (u awsUploaderImpl) Destination() string {
 	return fmt.Sprintf("aws s3 bucket %s ", u.bucket)
 }
 
-func (u *awsUploader) Upload(ctx context.Context, reader io.Reader, currentTs int64, retain int) error {
+// nolint:unused
+// implements interface uploaderImpl
+func (u awsUploaderImpl) uploadSnapshot(ctx context.Context, name string, data io.Reader) error {
 	input := &s3.PutObjectInput{
 		Bucket: &u.bucket,
-		Key:    aws.String(fmt.Sprintf("%sraft_snapshot-%d.snap", u.keyPrefix, currentTs)),
-		Body:   reader,
+		Key:    aws.String(u.keyPrefix + name),
+		Body:   data,
 	}
 
 	if u.sse {
 		input.ServerSideEncryption = s3Types.ServerSideEncryptionAes256
 	}
 
-	_, err := u.uploader.Upload(ctx, input)
-	if err != nil {
-		return fmt.Errorf("error uploading snapshot to aws s3: %w", err)
-	} else {
-		if retain > 0 {
-
-			existingSnapshots, err := u.listUploadedSnapshotsAscending(ctx)
-
-			if err != nil {
-				return fmt.Errorf("error getting existing snapshots from aws s3: %w", err)
-			}
-
-			if len(existingSnapshots)-int(retain) <= 0 {
-				return nil
-			}
-			snapshotsToDelete := existingSnapshots[0 : len(existingSnapshots)-int(retain)]
-
-			for i := range snapshotsToDelete {
-				_, err := u.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-					Bucket: &u.bucket,
-					Key:    snapshotsToDelete[i].Key,
-				})
-				if err != nil {
-					return fmt.Errorf("error deleting snapshot %s from aws s3: %w", *snapshotsToDelete[i].Key, err)
-				}
-			}
-		}
-		return nil
+	if _, err := u.uploader.Upload(ctx, input); err != nil {
+		return err
 	}
+
+	return nil
 }
 
-func (u *awsUploader) listUploadedSnapshotsAscending(ctx context.Context) ([]s3Types.Object, error) {
+// nolint:unused
+// implements interface uploaderImpl
+func (u awsUploaderImpl) deleteSnapshot(ctx context.Context, snapshot s3Types.Object) error {
+	input := &s3.DeleteObjectInput{
+		Bucket: &u.bucket,
+		Key:    snapshot.Key,
+	}
+
+	if _, err := u.client.DeleteObject(ctx, input); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// nolint:unused
+// implements interface uploaderImpl
+func (u awsUploaderImpl) listSnapshots(ctx context.Context, prefix string, ext string) ([]s3Types.Object, error) {
 	var result []s3Types.Object
 
 	existingSnapshotList, err := u.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
@@ -128,48 +124,20 @@ func (u *awsUploader) listUploadedSnapshotsAscending(ctx context.Context) ([]s3T
 	})
 
 	if err != nil {
-		return result, fmt.Errorf("error listing uploaded snapshots on aws s3: %w", err)
+		return result, err
 	}
 
 	for _, obj := range existingSnapshotList.Contents {
-		if strings.HasSuffix(*obj.Key, ".snap") && strings.Contains(*obj.Key, "raft_snapshot-") {
+		if strings.HasSuffix(*obj.Key, ext) && strings.Contains(*obj.Key, prefix) {
 			result = append(result, obj)
 		}
 	}
 
-	timestamp := func(o1, o2 *s3Types.Object) bool {
-		return o1.LastModified.Before(*o2.LastModified)
-	}
-
-	s3By(timestamp).Sort(result)
-
 	return result, nil
 }
 
-// implementation of Sort interface for s3 objects
-type s3By func(f1, f2 *s3Types.Object) bool
-
-func (by s3By) Sort(objects []s3Types.Object) {
-	fs := &s3ObjectSorter{
-		objects: objects,
-		by:      by, // The Sort method's receiver is the function (closure) that defines the sort order.
-	}
-	sort.Sort(fs)
-}
-
-type s3ObjectSorter struct {
-	objects []s3Types.Object
-	by      s3By
-}
-
-func (s *s3ObjectSorter) Len() int {
-	return len(s.objects)
-}
-
-func (s *s3ObjectSorter) Less(i, j int) bool {
-	return s.by(&s.objects[i], &s.objects[j])
-}
-
-func (s *s3ObjectSorter) Swap(i, j int) {
-	s.objects[i], s.objects[j] = s.objects[j], s.objects[i]
+// nolint:unused
+// implements interface uploaderImpl
+func (u awsUploaderImpl) compareSnapshots(a, b s3Types.Object) int {
+	return a.LastModified.Compare(*b.LastModified)
 }

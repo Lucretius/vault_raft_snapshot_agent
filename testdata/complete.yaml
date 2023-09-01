@@ -10,6 +10,9 @@ snapshots:
   frequency: "2h"
   retain: 10
   timeout: "120s"
+  namePrefix: "test-"
+  nameSuffix: ".test"
+  timestampFormat: "2006-01-02"
 uploaders:
   aws:
     region: test-region

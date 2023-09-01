@@ -24,7 +24,7 @@ func TestCreateDefaultAppRoleAuth(t *testing.T) {
 	auth := createAppRoleAuth(config)
 	_, err := auth.Refresh(&authApiStub)
 
-	assert.NoErrorf(t, err, "auth-refresh failed unexpectedly")
+	assert.NoError(t, err, "auth-refresh failed unexpectedly")
 	assertAppRoleAuthValues(t, authPath, expectedRoleId, expectedSecretId, auth, authApiStub)
 }
 

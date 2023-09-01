@@ -104,7 +104,7 @@ vault:
   insecure: <true|false>
 ```
 
-- `url` (default: https://127.0.0.1:8200) - specifies the url of the vault-server. 
+- `url` *(default: https://127.0.0.1:8200)* - specifies the url of the vault-server. 
   
   **The URL should point be the cluster-leader, otherwise no snapshots get taken until the server the url points to is elected leader!**  When running Vault on Kubernetes installed by the [default helm-chart](https://developer.hashicorp.com/vault/docs/platform/k8s/helm), this should be `http(s)://vault-active.<vault-namespace>.svc.cluster.local:<vault-server service-port>`. 
   
@@ -112,7 +112,7 @@ vault:
 
 
 
-- `insecure` (default: false) - specifies whether insecure https connections are allowed or not. Set to `true` when you use self-signed certificates
+- `insecure` *(default: false)* - specifies whether insecure https connections are allowed or not. Set to `true` when you use self-signed certificates
 
 
 ### Vault authentication
@@ -150,9 +150,9 @@ vault:
 ```
 
 ##### Configuration options
-- `id` (required) - specifies the role_id used to call the Vault API.  See the authentication steps below
-- `secret` (required) - specifies the secret_id used to call the Vault API
-- `path` (default: approle) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+- `id` **(required)** - specifies the role_id used to call the Vault API.  See the authentication steps below
+- `secret` **(required)** - specifies the secret_id used to call the Vault API
+- `path` *(default: approle)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
 
 To allow the App-Role access to the snapshots you should run the following commands on your vault-cluster:
 ```
@@ -174,9 +174,9 @@ vault:
 ```
 
 ##### Configuration options 
-- `role` (required) - specifies vault k8s auth role
-- `path` (default: kubernetes) - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
-- `jwtPath` (default: /var/run/secrets/kubernetes.io/serviceaccount/token) - specifies the path to the file with the JWT-Token for the kubernetes Service-Account
+- `role` **(required)** - specifies vault k8s auth role
+- `path` *(default: kubernetes)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+- `jwtPath` *(default: /var/run/secrets/kubernetes.io/serviceaccount/token)* - specifies the path to the file with the JWT-Token for the kubernetes Service-Account
 
 To allow kubernetes access to the snapshots you should run the following commands on your vault-cluster:
 ```
@@ -194,20 +194,28 @@ vault:
 ```
 
 ##### Configuration options
-- `token` (required) - specifies the token used to login
+- `token` **(required)** - specifies the token used to login
 
 
 ### Snapshot configuration
 ```
 snapshots:
-  frequency: "<duration>"
-  timeout: "<duration>"
+  frequency: <duration>
+  timeout: <duration>
   retain: <int>
+  namePrefix: <prefix>
+  nameSuffix: <suffix>
+  timestampFormat: <format>
 ```
 
-- `frequency` (default: 1h) - how often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
-- `retain` (default: 0)  -the number of backups to retain. `0` means all snapshots will be retained
-- `timeout` (default: 60s) - timeout for creating snapshots. Examples: `30s`, `1h`. Default: `60s`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
+- `frequency` *(default: 1h)* - how often to run the snapshot agent.  Examples: `30s`, `1h`.  See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
+- `retain` *(default: 0)*  -the number of snaphots to retain. For example, if you set `retain: 2`, the two most recent snapshots will be kept in storage. `0` means all snapshots will be retained
+- `timeout` *(default: 60s)* - timeout for creating snapshots. Examples: `30s`, `1h`. See https://golang.org/pkg/time/#ParseDuration for a full list of valid time units
+- `namePrefix` *(default: raft-snapshot-)* - prefix of the uploaded snapshots 
+- `nameSuffix` *(default: .snap)* - suffix/extension of the uploaded snapshots
+- `timestampFormat` *(default: 2006-01-02T15-04-05Z-0700)* - timestamp-format for the uploaded snapshots' timestamp, must be valid layout string for [go's time.Format](https://pkg.go.dev/time#Time.Format) - you can test your layout-string at the [Go Playground](https://go.dev/play/p/PxX7LmcPha0).
+   
+The name of the snapshots is created by concatenating `namePrefix`, the timestamp formatted according to `timestampFormat` and `nameSuffix`, e.g. the defaults would generate  `raft-snapshot-2023-09-01T15-30-00Z+0200.snap` for a snapshot taken at 15:30:00 on 09/01/2023 when the timezone is CEST (GMT + 2h).
 
 
 ### Uploader configuration
@@ -233,12 +241,12 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 
 #### AWS S3 Upload
-- `bucket` (required) - bucket to store snapshots in (required for AWS writes to work)
-- `region` (default: "") - S3 region if it is required 
-- `keyPrefix` (default: "") - prefix to store s3 snapshots in.  Defaults to empty string
-- `endpoint` (default: "") - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
-- `useServerSideEncryption` (default: false) -  Encryption is **off** by default. Set to true to turn on AWS' AES256 encryption. Support for AWS KMS keys is not currently supported.
-- `forcePathStyle` (default: false) - Needed if your S3 Compatible storage support only path-style or you would like to use S3's FIPS Endpoint.
+- `bucket` **(required)** - bucket to store snapshots in (required for AWS writes to work)
+- `region` *(default: "")* - S3 region if it is required 
+- `keyPrefix` *(default: "")* - prefix to store s3 snapshots in.  Defaults to empty string
+- `endpoint` *(default: "")* - S3 compatible storage endpoint (ex: http://127.0.0.1:9000)
+- `useServerSideEncryption` *(default: false)* -  Encryption is **off** by default. Set to true to turn on AWS' AES256 encryption. Support for AWS KMS keys is not currently supported.
+- `forcePathStyle` *(default: false)* - Needed if your S3 Compatible storage support only path-style or you would like to use S3's FIPS Endpoint.
 
 
 ##### AWS authentication
@@ -249,22 +257,22 @@ uploaders:
       key: <key>
       secret: <secret>
 ```
-- `key` (required) - specifies the access key. It's recommended to use the standard `AWS_ACCESS_KEY_ID` env var, though
-- `secret` (required) - specifies the secret It's recommended to use the standard `SECRET_ACCESS_KEY` env var, though
+- `key` **(required)** - specifies the access key. It's recommended to use the standard `AWS_ACCESS_KEY_ID` env var, though
+- `secret` **(required)** - specifies the secret It's recommended to use the standard `SECRET_ACCESS_KEY` env var, though
 
 
 #### Azure Storage
-- `accountName` (required) - the account name of the storage account
-- `accountKey` (required) - the account key of the storage account
-- `containerName` (required) - the name of the blob container to write to
+- `accountName` **(required)** - the account name of the storage account
+- `accountKey` **(required)** - the account key of the storage account
+- `containerName` **(required)** - the name of the blob container to write to
 
 
 #### Google Storage
-`bucket` (required) - the Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
+`bucket` **(required)** - the Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
 
 
 #### Local Storage
-`path` (required) - fully qualified path, not including file name, for where the snapshot should be written.  i.e. `/raft/snapshots`
+`path` **(required)** - fully qualified path, not including file name, for where the snapshot should be written.  i.e. `/raft/snapshots`
 
 
 ## License

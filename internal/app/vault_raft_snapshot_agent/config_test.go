@@ -32,42 +32,42 @@ func TestReadEmptyConfig(t *testing.T) {
 	file := "../../../testdata/empty.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for empty file`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for empty file`, file)
 }
 
 func TestReadConfigWithInvalidAddr(t *testing.T) {
-	file := "../../../testdata/invalid-addr.yaml"
+	file := "../../../testdata/invalid-url.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for config with invalid addr`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for config with invalid url`, file)
 }
 
 func TestReadConfigWithoutUploaders(t *testing.T) {
 	file := "../../../testdata/no-uploaders.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for config without uploaders`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for config without uploaders`, file)
 }
 
 func TestReadConfigWithInvalidUploader(t *testing.T) {
 	file := "../../../testdata/invalid-uploader.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for config with invalid uploader`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for config with invalid uploader`, file)
 }
 
 func TestReadConfigWithInvalidLocalUploadPath(t *testing.T) {
 	file := "../../../testdata/invalid-local-upload-path.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for config with invalid local upload-path`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for config with invalid local upload-path`, file)
 }
 
 func TestReadConfigWithInvalidAuth(t *testing.T) {
 	file := "../../../testdata/invalid-auth.yaml"
 	_, err := ReadConfig(file)
 
-	assert.Errorf(t, err, `ReadConfig(%s) should return error for config with invalid auth`, file)
+	assert.Error(t, err, `ReadConfig(%s) should return error for config with invalid auth`, file)
 }
 
 func TestReadCompleteConfig(t *testing.T) {
@@ -91,6 +91,9 @@ func TestReadCompleteConfig(t *testing.T) {
 			Frequency: time.Hour * 2,
 			Retain:    10,
 			Timeout:   time.Minute * 2,
+			NamePrefix: "test-",
+			NameSuffix: ".test",
+			TimestampFormat: "2006-01-02",
 		},
 		Uploaders: upload.UploadersConfig{
 			AWS: upload.AWSConfig{
@@ -122,7 +125,7 @@ func TestReadCompleteConfig(t *testing.T) {
 	file := "../../../testdata/complete.yaml"
 	config, err := ReadConfig(file)
 
-	assert.NoErrorf(t, err, "ReadConfig(%s) failed unexpectedly", file)
+	assert.NoError(t, err, "ReadConfig(%s) failed unexpectedly", file)
 	assert.Equal(t, expectedConfig, config)
 }
 
@@ -147,6 +150,9 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 			Frequency: time.Hour,
 			Retain:    0,
 			Timeout:   time.Minute,
+			NamePrefix: "raft-snapshot-",
+			NameSuffix: ".snap",
+			TimestampFormat: "2006-01-02T15-04-05Z-0700",
 		},
 		Uploaders: upload.UploadersConfig{
 			AWS: upload.AWSConfig{
@@ -164,7 +170,7 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 	file := "../../../testdata/defaults.yaml"
 	config, err := ReadConfig(file)
 
-	assert.NoErrorf(t, err, "ReadConfig(%s) failed unexpectedly", file)
+	assert.NoError(t, err, "ReadConfig(%s) failed unexpectedly", file)
 	assert.Equal(t, expectedConfig, config)
 }
 
