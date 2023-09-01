@@ -123,5 +123,5 @@ func (stub *uploaderImplStub) listSnapshots(ctx context.Context, prefix string, 
 // nolint:unused
 // implements interface uploaderImpl
 func (stub *uploaderImplStub) compareSnapshots(a, b int) int {
-	return b - a
+	return a - b
 }

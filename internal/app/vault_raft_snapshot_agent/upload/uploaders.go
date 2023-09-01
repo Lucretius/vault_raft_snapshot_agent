@@ -97,7 +97,7 @@ func (u uploader[T]) deleteSnapshots(ctx context.Context, prefix string, suffix 
 	}
 
 	if len(snapshots) > retain {
-		slices.SortFunc(snapshots, func(a, b T) int { return u.impl.compareSnapshots(a, b) * 1 })
+		slices.SortFunc(snapshots, func(a, b T) int { return u.impl.compareSnapshots(a, b) * -1 })
 
 		for _, s := range snapshots[retain:] {
 			if err := u.impl.deleteSnapshot(ctx, s); err != nil {
