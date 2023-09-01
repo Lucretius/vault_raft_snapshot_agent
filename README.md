@@ -3,7 +3,7 @@
 
 # Vault Raft Snapshot Agent
 
-Vault Raft Snapshot Agent is a Go binary that is meant to run alongside every member of a [Vault](https://www.vaultproject.io/) cluster and will take periodic snapshots of the Raft database and write it to the desired location.  It's configuration is meant to somewhat parallel that of the [Consul Snapshot Agent](https://www.consul.io/docs/commands/snapshot/agent.html) so many of the same configuration properties you see there will be present here.
+Vault Raft Snapshot Agent is a Go binary that will take periodic snapshots of the Raft database of your [Vault](https://www.vaultproject.io/) HA cluster using integrated storage and write it to local or remote storage.  It's configuration is meant to somewhat parallel that of the [Consul Snapshot Agent](https://www.consul.io/docs/commands/snapshot/agent.html) so many of the same configuration properties you see there will be present here.
 
 
 ## Running
