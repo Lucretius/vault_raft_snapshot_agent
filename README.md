@@ -100,7 +100,7 @@ _Options specified via environment-variables take precedence before the values s
 ### Vault configuration
 ```
 vault:
-  url_ <http(s)-url to vault-server>
+  url: <http(s)-url to vault-server>
   insecure: <true|false>
 ```
 
@@ -272,4 +272,4 @@ uploaders:
 
 ## Contributors
 - Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius/vault_raft_snapshot_agent/)
-- This build contains improvements donne by [@Bootsport](https://github.com/Boostport/vault_raft_snapshot_agent/)
+- This build contains improvements donne by [@Boostport](https://github.com/Boostport/vault_raft_snapshot_agent/)
