@@ -108,7 +108,7 @@ vault:
   
   **The URL should point be the cluster-leader, otherwise no snapshots get taken until the server the url points to is elected leader!**  When running Vault on Kubernetes installed by the [default helm-chart](https://developer.hashicorp.com/vault/docs/platform/k8s/helm), this should be `http(s)://vault-active.<vault-namespace>.svc.cluster.local:<vault-server service-port>`. 
   
-  You can alternativly specify the url with the environment-variable `VAULT_ADDR`
+  You can alternatively specify the url with the environment-variable `VAULT_ADDR`
 
 
 
