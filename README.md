@@ -237,7 +237,7 @@ uploaders:
     path: <path>
 ```
 
-Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local` and `aws` will write to both locations. Each options can be specified exactly one - thus is is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-entries.
+Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local` and `aws` will write to both locations. Each options can be specified exactly once - thus is is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-entries.
 
 
 #### AWS S3 Upload
