@@ -61,7 +61,7 @@ If your configuration is right and Vault is running on the same host as the agen
 ## Configuration
 
 Vault Raft Snaphot Agent looks for it's configuration-file in `/etc/vault.d/` or the current working directory by default. It uses [viper](https://github.com/spf13/viper) as configuration-backend so you can write your configuration in either json, yaml or toml.
-You an use `vault-raft-snapshot-agent --config <config-file>` top use a specific configuration file.
+You an use `vault-raft-snapshot-agent --config <config-file>` to use a specific configuration file.
 
 
 #### Example configuration (yaml)
