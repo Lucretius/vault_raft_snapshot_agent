@@ -3,7 +3,7 @@
 
 # Vault Raft Snapshot Agent
 
-Vault Raft Snapshot Agent is a Go binary that will take periodic snapshots of of a [Vault](https://www.vaultproject.io/) HA cluster using the integrated raft storage backend. It can Store the smapshots it Takes to local or remote storage backends Like AWS S3.
+Vault Raft Snapshot Agent is a Go binary that will take periodic snapshots of a [Vault](https://www.vaultproject.io/) HA cluster using the integrated raft storage backend. It can store the snapshots locally or upload them to a remote storage backend like AWS S3.
 
 
 ## Running
