@@ -1,0 +1,10 @@
+vault:
+  auth:
+    kubernetes:
+      role: "test-role"
+      jwtPath: "./jwt"
+snapshots:
+  frequency: 60s
+uploaders:
+  local:
+    path: .

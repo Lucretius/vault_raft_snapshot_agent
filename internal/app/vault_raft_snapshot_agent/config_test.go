@@ -2,6 +2,7 @@ package vault_raft_snapshot_agent
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ func defaultJwtPath(def string) string {
 		return def
 	}
 
-	return "/var/run/secrets/kubernetes.io/serviceaccount/token"		
+	return "/var/run/secrets/kubernetes.io/serviceaccount/token"
 }
 
 func TestReadEmptyConfig(t *testing.T) {
@@ -88,11 +89,11 @@ func TestReadCompleteConfig(t *testing.T) {
 			},
 		},
 		Snapshots: SnapshotConfig{
-			Frequency: time.Hour * 2,
-			Retain:    10,
-			Timeout:   time.Minute * 2,
-			NamePrefix: "test-",
-			NameSuffix: ".test",
+			Frequency:       time.Hour * 2,
+			Retain:          10,
+			Timeout:         time.Minute * 2,
+			NamePrefix:      "test-",
+			NameSuffix:      ".test",
 			TimestampFormat: "2006-01-02",
 		},
 		Uploaders: upload.UploadersConfig{
@@ -147,11 +148,11 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 			},
 		},
 		Snapshots: SnapshotConfig{
-			Frequency: time.Hour,
-			Retain:    0,
-			Timeout:   time.Minute,
-			NamePrefix: "raft-snapshot-",
-			NameSuffix: ".snap",
+			Frequency:       time.Hour,
+			Retain:          0,
+			Timeout:         time.Minute,
+			NamePrefix:      "raft-snapshot-",
+			NameSuffix:      ".snap",
 			TimestampFormat: "2006-01-02T15-04-05Z-0700",
 		},
 		Uploaders: upload.UploadersConfig{
@@ -175,11 +176,11 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 }
 
 func TestReadConfigBindsEnvVariables(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://from.env:8200")
-	os.Setenv("AWS_ACCESS_KEY_ID", "env-key")
-	os.Setenv("SECRET_ACCESS_KEY", "env-secret")
-	os.Setenv("VRSA_VAULT_AUTH_KUBERNETES_ROLE", "test")
-	os.Setenv("VRSA_VAULT_AUTH_KUBERNETES_JWTPATH", "./jwt")
+	t.Setenv("VAULT_ADDR", "http://from.env:8200")
+	t.Setenv("AWS_ACCESS_KEY_ID", "env-key")
+	t.Setenv("SECRET_ACCESS_KEY", "env-secret")
+	t.Setenv("VRSA_VAULT_AUTH_KUBERNETES_ROLE", "test")
+	t.Setenv("VRSA_VAULT_AUTH_KUBERNETES_JWTPATH", "./jwt")
 
 	file := "../../../testdata/envvars.yaml"
 	config, err := ReadConfig(file)
@@ -189,6 +190,56 @@ func TestReadConfigBindsEnvVariables(t *testing.T) {
 	assert.Equal(t, os.Getenv("AWS_ACCESS_KEY_ID"), config.Uploaders.AWS.Credentials.Key, "ReadConfig did not bind env-var AWS_ACCESS_KEY_ID")
 	assert.Equal(t, os.Getenv("SECRET_ACCESS_KEY"), config.Uploaders.AWS.Credentials.Secret, "ReadConfig did not bind env-var SECRET_ACCESS_KEY")
 	assert.Equal(t, os.Getenv("VRSA_VAULT_AUTH_KUBERNETES_JWTPATH"), config.Vault.Auth.Kubernetes.JWTPath, "ReadConfig did not bind env-var VRSA_VAULT_AUTH_KUBERNETES_JWTPATH")
+
+}
+
+func TestWatchAndReConfigure(t *testing.T) {
+	tempDir := t.TempDir()
+	file1 := "../../../testdata/watch-and-reconfigure1.yaml"
+	file2 := "../../../testdata/watch-and-reconfigure2.yaml"
+	configFile := fmt.Sprintf("%s/config.yaml", tempDir)
+
+	err := copyFile(t, "../../../testdata/jwt", fmt.Sprintf("%s/jwt", tempDir))
+	assert.NoError(t, err, "could not copy file jwt-file")
+
+	err = copyFile(t, file1, configFile)
+	assert.NoError(t, err, "could not copy file %s", file1)
+
+	config, err := ReadConfig(configFile)
+	assert.NoError(t, err, "could not read config-file %s", file1)
+
+	snapshotter, err := CreateSnapshotter(config)
+	assert.NoError(t, err, "could not create snapshotter")
+	assert.Equal(t, 30 * time.Second, snapshotter.config.Frequency)
+
+	reconfigured := WatchConfigAndReconfigure(snapshotter)
+
+	errs := make(chan error, 1)
+	go func() {
+		errs <- copyFile(t, file2, configFile)
+	}()
+
+	assert.NoError(t, <-errs, "could not copy file %s", file2)
+	assert.NoError(t, <-reconfigured)
+	assert.Equal(t, time.Minute, snapshotter.config.Frequency)
+
+	parser.OnConfigChange(func() { /* prevent error messages on cleanup */ })
+}
+
+func copyFile(t *testing.T, source string, dest string) error {
+	t.Helper()
+
+	in, err := os.ReadFile(source)
+	if err != nil {
+		return err
+	}
+
+	tmpFile := fmt.Sprintf("%s.tmp", dest)
+	if err := os.WriteFile(tmpFile, in, 0644); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpFile, dest)
 }
 
 func init() {

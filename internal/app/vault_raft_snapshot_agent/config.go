@@ -55,16 +55,22 @@ func ReadConfig(file string) (config SnapshotterConfig, err error) {
 	return config, nil
 }
 
-func WatchConfigAndReconfigure(snapshotter *Snapshotter) {
+func WatchConfigAndReconfigure(snapshotter *Snapshotter) <-chan error {
+	ch := make(chan error, 1)
+
 	parser.OnConfigChange(func() {
 		config := SnapshotterConfig{}
 
 		if err := parser.Unmarshal(&config); err != nil {
-			log.Printf("Ignoring configuration change as configuration in %s is invalid: %v", parser.ConfigFileUsed(), err)
-		}
-
-		if err := snapshotter.Reconfigure(config); err != nil {
-			log.Fatalf("Cound not reconfigure snapshotter from %s: %v", parser.ConfigFileUsed(), err)
+			log.Printf("Ignoring configuration change as configuration in %s is invalid: %v\n", parser.ConfigFileUsed(), err)
+			ch <- err
+		} else if err := snapshotter.Reconfigure(config); err != nil {
+			log.Printf("Could not reconfigure snapshotter from %s: %v\n", parser.ConfigFileUsed(), err)
+			ch <- err
+		} else {
+			ch <- nil
 		}
 	})
+
+	return ch
 }
