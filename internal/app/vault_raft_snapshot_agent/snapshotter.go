@@ -30,10 +30,12 @@ type SnapshotConfig struct {
 }
 
 type Snapshotter struct {
-	lock      sync.Mutex
-	client    *vault.VaultClient
-	uploaders []upload.Uploader
-	config    SnapshotConfig
+	lock          sync.Mutex
+	client        *vault.VaultClient
+	uploaders     []upload.Uploader
+	config        SnapshotConfig
+	lastSnapshot  time.Time
+	snapshotTimer *time.Timer
 }
 
 func CreateSnapshotter(config SnapshotterConfig) (*Snapshotter, error) {
@@ -65,15 +67,18 @@ func (s *Snapshotter) Configure(config SnapshotConfig, client *vault.VaultClient
 	s.client = client
 	s.uploaders = uploaders
 	s.config = config
+	s.updateTimer(config.Frequency)
 }
 
-func (s *Snapshotter) TakeSnapshot(ctx context.Context) (time.Duration, error) {
+func (s *Snapshotter) TakeSnapshot(ctx context.Context) (*time.Timer, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	s.resetTimer()
+
 	snapshot, err := os.CreateTemp("", "snapshot")
 	if err != nil {
-		return s.config.Frequency, err
+		return s.snapshotTimer, err
 	}
 
 	defer os.Remove(snapshot.Name())
@@ -83,15 +88,15 @@ func (s *Snapshotter) TakeSnapshot(ctx context.Context) (time.Duration, error) {
 
 	err = s.client.TakeSnapshot(ctx, snapshot)
 	if err != nil {
-		return s.config.Frequency, err
+		return s.snapshotTimer, err
 	}
 
 	_, err = snapshot.Seek(0, io.SeekStart)
 	if err != nil {
-		return s.config.Frequency, err
+		return s.snapshotTimer, err
 	}
 
-	return s.config.Frequency, s.uploadSnapshot(ctx, snapshot, time.Now().Format(s.config.TimestampFormat))
+	return s.snapshotTimer, s.uploadSnapshot(ctx, snapshot, time.Now().Format(s.config.TimestampFormat))
 }
 
 func (s *Snapshotter) uploadSnapshot(ctx context.Context, snapshot io.Reader, timestamp string) error {
@@ -106,4 +111,27 @@ func (s *Snapshotter) uploadSnapshot(ctx context.Context, snapshot io.Reader, ti
 	}
 
 	return errs
+}
+
+func (s *Snapshotter) resetTimer() {
+	s.lastSnapshot = time.Now()
+	s.snapshotTimer = time.NewTimer(s.config.Frequency)
+}
+
+func (s *Snapshotter) updateTimer(frequency time.Duration) {
+	if s.snapshotTimer != nil {
+		if !s.snapshotTimer.Stop() {
+			<-s.snapshotTimer.C
+		}
+
+		now := time.Now()
+		timeout := time.Duration(0)
+
+		nextSnapshot := s.lastSnapshot.Add(frequency)
+		if nextSnapshot.After(now) {
+			timeout = nextSnapshot.Sub(now)
+		}
+
+		s.snapshotTimer.Reset(timeout)
+	}
 }

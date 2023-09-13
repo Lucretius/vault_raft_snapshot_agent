@@ -35,7 +35,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -110,6 +109,7 @@ func startSnapshotter(configFile cli.Path) {
 		log.Fatalf("Cannot instantiate snapshotter: %s\n", err)
 	}
 
+	internal.WatchConfigAndReconfigure(snapshotter)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -124,15 +124,13 @@ func startSnapshotter(configFile cli.Path) {
 }
 
 func runSnapshotter(ctx context.Context, snapshotter *internal.Snapshotter) {
-	internal.WatchConfigAndReconfigure(snapshotter)
-
 	for {
-		frequency, err := snapshotter.TakeSnapshot(ctx)
+		timeout, err := snapshotter.TakeSnapshot(ctx)
 		if err != nil {
 			log.Printf("Could not take snapshot or upload to all targets: %v\n", err)
 		}
 		select {
-		case <-time.After(frequency):
+		case <-timeout.C:
 			continue
 		case <-ctx.Done():
 			os.Exit(1)

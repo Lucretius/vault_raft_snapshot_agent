@@ -88,10 +88,11 @@ func TestSnapshotterLocksConfigure(t *testing.T) {
 
 	assert.GreaterOrEqual(t, time.Since(start), clientAPIStub.snapshotRuntime+250, "TakeSnapshot did not prevent re-configuration during snapshots")
 
-	frequency, err := snapshotter.TakeSnapshot(context.Background())
+	timer, err := snapshotter.TakeSnapshot(context.Background())
 
+	assert.NotNil(t, timer)
 	assert.NoError(t, err, "TakeSnapshot failed unexpectedly")
-	assert.Equal(t, newConfig.Frequency, frequency, "Snaphotter did not re-configure propertly")
+	assert.Equal(t, newConfig.Frequency, snapshotter.config.Frequency, "Snaphotter did not re-configure propertly")
 }
 
 func TestSnapshotterAbortsAfterTimeout(t *testing.T) {
@@ -191,20 +192,148 @@ func TestSnapshotterContinuesUploadingIfUploadFails(t *testing.T) {
 	assert.True(t, uploaderStub2.uploaded, "TakeSnapshot did not upload to second uploader")
 }
 
-func TestSnapshotterReturnsFrequency(t *testing.T) {
-	clientAPIStub := snapshotterVaultClientAPIStub{}
+func TestSnapshotterResetsTimer(t *testing.T) {
+	clientAPIStub := snapshotterVaultClientAPIStub{leader: true}
 	uploaderStub := uploaderStub{}
 
 	config := SnapshotConfig{
-		Frequency: time.Minute,
+		Frequency: time.Second,
 	}
 
 	snapshotter := Snapshotter{}
 	snapshotter.Configure(config, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
 
-	frequency, _ := snapshotter.TakeSnapshot(context.Background())
+	start := time.Now()
+	timer, err := snapshotter.TakeSnapshot(context.Background())
 
-	assert.Equal(t, config.Frequency, frequency)
+	assert.NotNil(t, timer)
+	assert.NoError(t, err)
+
+	for {
+		<-timer.C
+		break
+	}
+
+	assert.GreaterOrEqual(t, time.Since(start), time.Second)
+	assert.Less(t, time.Since(start), 2*time.Second)
+	assert.Equal(t, config.Frequency, snapshotter.config.Frequency)
+}
+
+func TestSnapshotterResetsTimerOnError(t *testing.T) {
+	clientAPIStub := snapshotterVaultClientAPIStub{leader: false}
+	uploaderStub := uploaderStub{}
+
+	config := SnapshotConfig{
+		Frequency: time.Second,
+	}
+
+	snapshotter := Snapshotter{}
+	snapshotter.Configure(config, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	start := time.Now()
+	timer, err := snapshotter.TakeSnapshot(context.Background())
+	assert.NotNil(t, timer)
+	assert.Error(t, err)
+
+	for {
+		<-timer.C
+		break
+	}
+
+	assert.GreaterOrEqual(t, time.Since(start), time.Second)
+	assert.Less(t, time.Since(start), 2*time.Second)
+	assert.Equal(t, config.Frequency, snapshotter.config.Frequency)
+}
+
+func TestSnapshotterUpdatesTimerOnConfigureForGreaterFrequency(t *testing.T) {
+	clientAPIStub := snapshotterVaultClientAPIStub{leader: false}
+	uploaderStub := uploaderStub{}
+
+	config := SnapshotConfig{
+		Frequency: time.Second,
+	}
+
+	snapshotter := Snapshotter{}
+	snapshotter.Configure(config, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	start := time.Now()
+	timer, _ := snapshotter.TakeSnapshot(context.Background())
+
+	newConfig := SnapshotConfig{
+		Frequency: time.Second * 2,
+	}
+
+	snapshotter.Configure(newConfig, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	for {
+		<-timer.C
+		break
+	}
+
+	assert.GreaterOrEqual(t, time.Since(start), 2*time.Second)
+	assert.Less(t, time.Since(start), 3*time.Second)
+	assert.Equal(t, newConfig.Frequency, snapshotter.config.Frequency)
+}
+
+func TestSnapshotterUpdatesTimerOnConfigureForLesserFrequency(t *testing.T) {
+	clientAPIStub := snapshotterVaultClientAPIStub{leader: false}
+	uploaderStub := uploaderStub{}
+
+	config := SnapshotConfig{
+		Frequency: time.Second,
+	}
+
+	snapshotter := Snapshotter{}
+	snapshotter.Configure(config, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	start := time.Now()
+	timer, _ := snapshotter.TakeSnapshot(context.Background())
+
+	newConfig := SnapshotConfig{
+		Frequency: time.Millisecond * 500,
+	}
+
+	snapshotter.Configure(newConfig, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	for {
+		<-timer.C
+		break
+	}
+
+	assert.GreaterOrEqual(t, time.Since(start), 500*time.Millisecond)
+	assert.Less(t, time.Since(start), 750*time.Millisecond)
+	assert.Equal(t, newConfig.Frequency, snapshotter.config.Frequency)
+}
+
+func TestSnapshotterTriggersTimerOnConfigureForLesserFrequency(t *testing.T) {
+	clientAPIStub := snapshotterVaultClientAPIStub{leader: false}
+	uploaderStub := uploaderStub{}
+
+	config := SnapshotConfig{
+		Frequency: time.Second,
+	}
+
+	snapshotter := Snapshotter{}
+	snapshotter.Configure(config, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	timer, _ := snapshotter.TakeSnapshot(context.Background())
+	time.Sleep(time.Millisecond * 500)
+
+	newConfig := SnapshotConfig{
+		Frequency: time.Millisecond * 300,
+	}
+
+	start := time.Now()
+	snapshotter.Configure(newConfig, vault.NewClient("http://127.0.0.1:8200", &clientAPIStub, nil), []upload.Uploader{&uploaderStub})
+
+	for {
+		
+		<-timer.C
+		break
+	}
+
+	assert.LessOrEqual(t, time.Since(start), 10*time.Millisecond)
+	assert.Equal(t, newConfig.Frequency, snapshotter.config.Frequency)
 }
 
 type snapshotterVaultClientAPIStub struct {
