@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -234,12 +235,16 @@ func copyFile(t *testing.T, source string, dest string) error {
 		return err
 	}
 
-	tmpFile := fmt.Sprintf("%s.tmp", dest)
-	if err := os.WriteFile(tmpFile, in, 0644); err != nil {
-		return err
-	}
+	if runtime.GOOS != "windows" {
+		tmpFile := fmt.Sprintf("%s.tmp", dest)
+		if err := os.WriteFile(tmpFile, in, 0644); err != nil {
+			return err
+		}
 
-	return os.Rename(tmpFile, dest)
+		return os.Rename(tmpFile, dest)
+	} else {
+		return os.WriteFile(dest, in, 0644)
+	}
 }
 
 func init() {
