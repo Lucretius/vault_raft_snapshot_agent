@@ -29,6 +29,7 @@ uploaders:
     accountName: test-account
     accountKey: test-key
     container: test-container
+    cloudDomain: blob.core.chinacloudapi.cn
   google:
     bucket: test-bucket
   local:

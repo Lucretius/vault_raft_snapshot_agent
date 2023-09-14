@@ -13,6 +13,7 @@ type AzureConfig struct {
 	AccountName   string `validate:"required_if=Empty false"`
 	AccountKey    string `validate:"required_if=Empty false"`
 	ContainerName string `mapstructure:"container" validate:"required_if=Empty false"`
+	CloudDomain   string `default:"blob.core.windows.net" validate:"required_if=Empty false"`
 	Empty         bool
 }
 
@@ -27,7 +28,7 @@ func createAzureUploader(config AzureConfig) (*uploader[*container.BlobItem], er
 		return nil, fmt.Errorf("invalid credentials for azure: %w", err)
 	}
 
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", config.AccountName)
+	serviceURL := fmt.Sprintf("https://%s.%s/", config.AccountName, config.CloudDomain)
 	client, err := azblob.NewClientWithSharedKeyCredential(serviceURL, credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create azure client: %w", err)

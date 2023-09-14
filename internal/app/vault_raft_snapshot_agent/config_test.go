@@ -115,6 +115,7 @@ func TestReadCompleteConfig(t *testing.T) {
 				AccountName:   "test-account",
 				AccountKey:    "test-key",
 				ContainerName: "test-container",
+				CloudDomain:   "blob.core.chinacloudapi.cn",
 			},
 			GCP: upload.GCPConfig{
 				Bucket: "test-bucket",
@@ -163,7 +164,10 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 				Credentials: upload.AWSCredentialsConfig{Empty: true},
 				Empty:       true,
 			},
-			Azure: upload.AzureConfig{Empty: true},
+			Azure: upload.AzureConfig{
+				CloudDomain: "blob.core.windows.net", 
+				Empty: true,
+			},
 			GCP:   upload.GCPConfig{Empty: true},
 			Local: upload.LocalConfig{
 				Path: ".",

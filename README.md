@@ -232,6 +232,7 @@ uploaders:
     accountName: <name>
     accountKey: <key>
     container: <container>
+    cloudDomain: <domain>
   google:
     bucket: <bucket>
   local:
@@ -266,6 +267,7 @@ uploaders:
 - `accountName` **(required)** - the account name of the storage account
 - `accountKey` **(required)** - the account key of the storage account
 - `containerName` **(required)** - the name of the blob container to write to
+- `cloudDomain` *(default: blob.core.windows.net) - domain of the cloud-service to use
 
 
 #### Google Storage
