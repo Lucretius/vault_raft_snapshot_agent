@@ -11,6 +11,7 @@ import (
 
 type VaultClientConfig struct {
 	Url      string `default:"http://127.0.0.1:8200" validate:"required,http_url"`
+	Timeout	 time.Duration `default:"60s"`
 	Insecure bool
 	Auth     auth.AuthConfig
 }
@@ -29,7 +30,7 @@ type VaultClient struct {
 }
 
 func CreateClient(config VaultClientConfig) (*VaultClient, error) {
-	api, err := newVaultAPIImpl(config.Url, config.Insecure)
+	api, err := newVaultAPIImpl(config.Url, config.Insecure, config.Timeout)
 	if err != nil {
 		return nil, err
 	}

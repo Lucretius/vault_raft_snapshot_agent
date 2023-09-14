@@ -1,6 +1,7 @@
 vault:
   url: "https://example.com:8200"
   insecure: true
+  timeout: 5m
   auth:
     kubernetes:
       role: "test-role"

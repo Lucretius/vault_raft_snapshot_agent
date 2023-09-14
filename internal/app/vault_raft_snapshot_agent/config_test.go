@@ -77,6 +77,7 @@ func TestReadCompleteConfig(t *testing.T) {
 		Vault: vault.VaultClientConfig{
 			Url:      "https://example.com:8200",
 			Insecure: true,
+			Timeout:  5 * time.Minute,
 			Auth: auth.AuthConfig{
 				AppRole: auth.AppRoleAuthConfig{
 					Path:  "approle",
@@ -136,6 +137,7 @@ func TestReadConfigSetsDefaultValues(t *testing.T) {
 		Vault: vault.VaultClientConfig{
 			Url:      "http://127.0.0.1:8200",
 			Insecure: false,
+			Timeout:  time.Minute,
 			Auth: auth.AuthConfig{
 				AppRole: auth.AppRoleAuthConfig{
 					Path:  "approle",
@@ -211,7 +213,7 @@ func TestWatchAndReConfigure(t *testing.T) {
 
 	snapshotter, err := CreateSnapshotter(config)
 	assert.NoError(t, err, "could not create snapshotter")
-	assert.Equal(t, 30 * time.Second, snapshotter.config.Frequency)
+	assert.Equal(t, 30*time.Second, snapshotter.config.Frequency)
 
 	reconfigured := WatchConfigAndReconfigure(snapshotter)
 

@@ -102,6 +102,7 @@ _Options specified via environment-variables take precedence before the values s
 vault:
   url: <http(s)-url to vault-server>
   insecure: <true|false>
+  timeout: <duration>
 ```
 
 - `url` *(default: https://127.0.0.1:8200)* - specifies the url of the vault-server. 
@@ -111,8 +112,8 @@ vault:
   You can alternatively specify the url with the environment-variable `VAULT_ADDR`
 
 
-
 - `insecure` *(default: false)* - specifies whether insecure https connections are allowed or not. Set to `true` when you use self-signed certificates
+- `timeout` *(default: 60s)* - timeout for the vault-http-client (see https://golang.org/pkg/time/#ParseDuration for a full list of valid time units); increase for large raft databases (and increase `snapshots.timeout` accordingly!)
 
 
 ### Vault authentication

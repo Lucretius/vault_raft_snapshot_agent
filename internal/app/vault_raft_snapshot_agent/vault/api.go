@@ -12,9 +12,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func newVaultAPIImpl(address string, insecure bool) (*vaultAPIImpl, error) {
+func newVaultAPIImpl(address string, insecure bool, timeout time.Duration) (*vaultAPIImpl, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = address
+	apiConfig.HttpClient.Timeout = timeout
 
 	tlsConfig := &api.TLSConfig{
 		Insecure: insecure,
@@ -31,14 +32,14 @@ func newVaultAPIImpl(address string, insecure bool) (*vaultAPIImpl, error) {
 
 	return &vaultAPIImpl{
 		client,
-		&vaultAuthAPIImpl {
+		&vaultAuthAPIImpl{
 			client,
 		},
 	}, nil
 }
 
 type vaultAPIImpl struct {
-	client *api.Client
+	client  *api.Client
 	authAPI *vaultAuthAPIImpl
 }
 
@@ -60,11 +61,11 @@ func (impl *vaultAPIImpl) AuthAPI() auth.VaultAuthAPI {
 }
 
 type vaultAuthAPIImpl struct {
-	client *api.Client	
+	client *api.Client
 }
 
 func (impl *vaultAuthAPIImpl) LoginToBackend(authPath string, credentials map[string]interface{}) (leaseDuration time.Duration, err error) {
-	resp, err := impl.client.Logical().Write(path.Clean("auth/"+ authPath +"/login"), credentials)
+	resp, err := impl.client.Logical().Write(path.Clean("auth/"+authPath+"/login"), credentials)
 	if err != nil {
 		return 0, err
 	}
@@ -89,5 +90,3 @@ func (impl *vaultAuthAPIImpl) LoginWithToken(token string) (leaseDuration time.D
 
 	return time.Duration(ttl), nil
 }
-
-
