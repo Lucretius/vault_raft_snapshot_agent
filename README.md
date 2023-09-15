@@ -134,9 +134,9 @@ path "/sys/storage/raft/snapshot"
 
 The above policy is the minimum required policy to be able to generate snapshots. This policy must be associated with the app- or kubernetes-role you specify in you're configuration (see below).
 
-Only one of the following authentication options should be specified. If multiple options are specified *one* of them is used with the following priority: `approle`, `kubernetes`, `token`. If no option is specified, Vault Raft Snapshot Agent tries to access vault unauthenticated (which should fail outside of test- or develop-environments)
+Only one of the following authentication options should be specified. If multiple options are specified *one* of them is used with the following priority: `approle`, `aws`, `azure`, `gcp`, `kubernetes`, `ldap`,  `token`, `userpass`. If no option is specified, Vault Raft Snapshot Agent tries to access vault unauthenticated (which should fail outside of test- or develop-environments)
 
-When using App-Role or Kubernetes authentication Vault Raft Snapshot Agent automatically renews the authentication when it expires.
+Vault Raft Snapshot Agent automatically renews the authentication when it expires.
 
 
 #### AppRole authentication
