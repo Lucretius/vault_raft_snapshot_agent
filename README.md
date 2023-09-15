@@ -141,7 +141,7 @@ Vault Raft Snapshot Agent automatically renews the authentication when it expire
 
 #### AppRole authentication
 
-An AppRole allows the snapshot agent to automatically rotate tokens to avoid long-lived credentials. To learn more about AppRole's, see [the Vault docs](https://www.vaultproject.io/docs/auth/approle)
+Authentication via AppRole (see [the Vault docs](https://www.vaultproject.io/docs/auth/approle))
 
  
 ##### Minimal configuration
