@@ -1,7 +1,7 @@
 vault:
   auth:
     approle:
-      id: "test"
+      role: "test"
 snapshots:
   frequency: "1h"
 uploaders:

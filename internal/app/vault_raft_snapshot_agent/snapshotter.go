@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/config"
 	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/upload"
 	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/vault"
 	"go.uber.org/multierr"
@@ -20,6 +21,10 @@ type SnapshotterConfig struct {
 	Uploaders upload.UploadersConfig
 }
 
+func (c SnapshotterConfig) HasUploaders() bool {
+	return !(c.Uploaders.AWS.Empty && c.Uploaders.Azure.Empty && c.Uploaders.GCP.Empty && c.Uploaders.Local.Empty)
+}
+
 type SnapshotConfig struct {
 	Frequency       time.Duration `default:"1h"`
 	Retain          int
@@ -29,24 +34,62 @@ type SnapshotConfig struct {
 	TimestampFormat string        `default:"2006-01-02T15-04-05Z-0700"`
 }
 
+type SnapshotterOptions struct {
+	ConfigFileName        string
+	ConfigFileSearchPaths []string
+	ConfigFilePath        string
+	EnvPrefix             string
+}
+
 type Snapshotter struct {
 	lock          sync.Mutex
-	client        *vault.VaultClient
+	client        snapshotterVaultAPI
 	uploaders     []upload.Uploader
 	config        SnapshotConfig
 	lastSnapshot  time.Time
 	snapshotTimer *time.Timer
 }
 
-func CreateSnapshotter(config SnapshotterConfig) (*Snapshotter, error) {
+type snapshotterVaultAPI interface {
+	TakeSnapshot(ctx context.Context, writer io.Writer) error
+}
+
+func CreateSnapshotter(options SnapshotterOptions) (*Snapshotter, error) {
+	c := SnapshotterConfig{}
+	parser := config.NewParser[*SnapshotterConfig](options.ConfigFileName, options.EnvPrefix, options.ConfigFileSearchPaths...)
+
+	if err := parser.ReadConfig(&c, options.ConfigFilePath); err != nil {
+		return nil, err
+	}
+
+	snapshotter, err := createSnapshotter(c)
+	if err != nil {
+		return nil, err
+	}
+
+	parser.OnConfigChange(
+		&SnapshotterConfig{},
+		func(config *SnapshotterConfig) error {
+			if err := snapshotter.reconfigure(*config); err != nil {
+				log.Printf("could not reconfigure snapshotter: %s\n", err)
+				return err
+			}
+			return nil
+		},
+	)
+
+	return snapshotter, nil
+}
+
+func createSnapshotter(config SnapshotterConfig) (*Snapshotter, error) {
 	snapshotter := &Snapshotter{}
 
-	err := snapshotter.Reconfigure(config)
+	err := snapshotter.reconfigure(config)
 	return snapshotter, err
 }
 
-func (s *Snapshotter) Reconfigure(config SnapshotterConfig) error {
-	client, err := vault.CreateClient(config.Vault)
+func (s *Snapshotter) reconfigure(config SnapshotterConfig) error {
+	client, err := vault.CreateVaultClient(config.Vault)
 	if err != nil {
 		return err
 	}
@@ -60,7 +103,7 @@ func (s *Snapshotter) Reconfigure(config SnapshotterConfig) error {
 	return nil
 }
 
-func (s *Snapshotter) Configure(config SnapshotConfig, client *vault.VaultClient, uploaders []upload.Uploader) {
+func (s *Snapshotter) Configure(config SnapshotConfig, client snapshotterVaultAPI, uploaders []upload.Uploader) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

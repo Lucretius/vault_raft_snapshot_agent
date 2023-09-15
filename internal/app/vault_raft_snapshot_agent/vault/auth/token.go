@@ -1,25 +1,62 @@
 package auth
 
-import (
+import(
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/api"
 )
 
 type tokenAuth struct {
 	token string
 }
 
-func createTokenAuth(token string) tokenAuth {
-	return tokenAuth{
-		token,
-	}
+type tokenAuthAPI interface {
+	SetToken(token string)
+	LookupToken() (*api.Secret, error)
+	ClearToken()
 }
 
-func (a tokenAuth) Refresh(api VaultAuthAPI) (time.Time, error) {
-	leaseDuration, err := api.LoginWithToken(a.token)
+func createTokenAuth(token string) tokenAuth {
+	return tokenAuth{token}
+}
+
+func (auth tokenAuth) Login(ctx context.Context, client *api.Client) (time.Duration, error) {
+	return auth.login(tokenAuthImpl{client})
+}
+
+func (auth tokenAuth) login(authAPI tokenAuthAPI) (time.Duration, error) {
+	authAPI.SetToken(auth.token)
+	info, err := authAPI.LookupToken()
 	if err != nil {
-		return time.Now(), fmt.Errorf("error logging in with token: %s", err)
+		authAPI.ClearToken()
+		return 0, err
 	}
 
-	return time.Now().Add((time.Second * leaseDuration) / 2), nil
+	ttl, err := info.Data["ttl"].(json.Number).Int64()
+	if err != nil {
+		authAPI.ClearToken()
+		return 0, fmt.Errorf("error converting ttl to int: %s", err)
+	}
+
+	return time.Duration(ttl), nil
+
+}
+
+type tokenAuthImpl struct {
+	client *api.Client
+}
+
+func (impl tokenAuthImpl) SetToken(token string) {
+	impl.client.SetToken(token)
+}
+
+func (impl tokenAuthImpl) LookupToken() (*api.Secret, error) {
+	return impl.client.Auth().Token().LookupSelf()
+}
+
+func (impl tokenAuthImpl) ClearToken() {
+	impl.client.ClearToken()
 }

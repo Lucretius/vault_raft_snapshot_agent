@@ -1,109 +1,37 @@
 package auth
 
 import (
-	"bufio"
-	"errors"
-	"io"
-	"os"
-	"path/filepath"
+	"fmt"
 	"testing"
-	"time"
+
+	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/config"
+	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/test"
+
+	"github.com/hashicorp/vault/api/auth/kubernetes"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateKubernetesAuth(t *testing.T) {
-	authPath := "test"
-	jwtPath := os.TempDir() + "/kubernetes"
-	expectedRole := "testRole"
-	expectedJwt, createdFile := createJwtFile(t, jwtPath, "testSecret")
-	if createdFile {
-		defer os.Remove(jwtPath)
-	}
-
+	jwtPath := fmt.Sprintf("%s/jwt", t.TempDir())
 	config := KubernetesAuthConfig{
-		Path:    authPath,
-		Role:    expectedRole,
-		JWTPath: jwtPath,
+		Role: "test-role",
+		JWTPath: config.Path(jwtPath),
+		Path: "test-path",
 	}
 
-	authApiStub := kubernetesVaultAuthApiStub{}
+	err := test.WriteFile(t, jwtPath, "test")
+	assert.NoError(t, err, "could not write jwt-file")
 
-	auth := createKubernetesAuth(config)
-	_, err := auth.Refresh(&authApiStub)
+	expectedAuthMethod, err := kubernetes.NewKubernetesAuth(
+		config.Role,
+		kubernetes.WithMountPath(config.Path),
+		kubernetes.WithServiceAccountTokenPath(string(config.JWTPath)),
+	)
+	assert.NoError(t, err, "NewKubernetesAuth failed unexpectedly")
 
-	assert.NoError(t, err, "auth-refresh failed unexpectedly")
-	assertKubernetesAuthValues(t, authPath, expectedRole, expectedJwt, auth, authApiStub)
-}
+	auth, err := createKubernetesAuth(config)
+	assert.NoError(t, err, "createKubernetesAuth failed unexpectedly")
 
-func TestCreateKubernetesAuthWithMissingJwtPath(t *testing.T) {
-	authPath := "test"
-	customJwtPath := "./does/not/exist"
-	expectedRole := "testRole"
-
-	config := KubernetesAuthConfig{
-		Path:    authPath,
-		Role:    expectedRole,
-		JWTPath: customJwtPath,
-	}
-
-	authApiStub := kubernetesVaultAuthApiStub{}
-
-	auth := createKubernetesAuth(config)
-
-	_, err := auth.Refresh(&authApiStub)
-	assert.Errorf(t, err, "kubernetes auth refresh does not fail when jwt-file is missing")
-}
-
-func assertKubernetesAuthValues(t *testing.T, expectedAuthPath string, expectedRole string, expectedJwt string, auth authBackend, api kubernetesVaultAuthApiStub) {
-	assert.Equal(t, "Kubernetes", auth.name)
-	assert.Equal(t, expectedAuthPath, api.path)
-	assert.Equal(t, expectedRole, api.role)
-	assert.Equal(t, expectedJwt, api.jwt)
-}
-
-type kubernetesVaultAuthApiStub struct {
-	path string
-	role string
-	jwt  string
-}
-
-func (stub *kubernetesVaultAuthApiStub) LoginToBackend(path string, credentials map[string]interface{}) (leaseDuration time.Duration, err error) {
-	stub.path = path
-	stub.role = credentials["role"].(string)
-	stub.jwt = credentials["jwt"].(string)
-	return 0, nil
-}
-
-func (stub *kubernetesVaultAuthApiStub) LoginWithToken(token string) (leaseDuration time.Duration, err error) {
-	return 0, errors.New("not implemented")
-}
-
-func createJwtFile(t *testing.T, path string, defaultJwt string) (jwt string, created bool) {
-	t.Helper()
-
-	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil && !errors.Is(err, os.ErrExist) {
-		t.Fatalf("could not create directorys for jwt-file %s: %v", path, err)
-	}
-
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		t.Fatalf("could not create jwt-file %s: %v", path, err)
-	}
-
-	defer file.Close()
-
-	content, err := io.ReadAll(bufio.NewReader(file))
-	if err != nil {
-		t.Fatalf("could not read jwt-file %s: %v", path, err)
-	}
-
-	if len(content) > 0 {
-		return string(content), false
-	} else {
-		if _, err := file.Write([]byte(defaultJwt)); err != nil {
-			t.Fatalf("could not write expected secret to %s: %v", path, err)
-		}
-		return defaultJwt, true
-	}
+	assert.Equal(t, expectedAuthMethod, auth.delegate)
 }

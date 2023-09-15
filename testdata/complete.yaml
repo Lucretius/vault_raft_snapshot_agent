@@ -3,10 +3,37 @@ vault:
   insecure: true
   timeout: 5m
   auth:
+    approle:
+      role: "test-approle"
+      secret: "test-approle-secret"
+      path: "test-approle-path"
+    aws:
+      role: "test-aws-role"
+      region: "test-region"
+      ec2nonce: "test-nonce"
+      ec2signaturetype: "rsa2048"
+      path: "test-aws-path"
+    azure:
+      role: "test-azure-role"
+      resource: "test-resource"
+      path: "test-azure-path"
+    gcp:
+      role: "test-gcp-role"
+      serviceAccountEmail: "test@example.com"
+      path: "test-gcp-path"
     kubernetes:
-      role: "test-role"
-      path: "test-auth"
+      role: "test-kubernetes-role"
+      path: "test-kubernetes-path"
       jwtPath: "./jwt"
+    ldap:
+      username: "test-ldap-user"
+      password: "test-ldap-pass"
+      path: "test-ldap-path"
+    token: "test-token"
+    userpass:
+      username: "test-user"
+      password: "test-pass"
+      path: "test-userpass-path"
 snapshots:
   frequency: "2h"
   retain: 10

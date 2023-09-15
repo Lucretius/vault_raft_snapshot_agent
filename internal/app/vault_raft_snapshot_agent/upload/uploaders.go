@@ -15,10 +15,6 @@ type UploadersConfig struct {
 	Local LocalConfig `default:"{\"Empty\": true}" mapstructure:"local"`
 }
 
-func (c UploadersConfig) HasUploaders() bool {
-	return !(c.AWS.Empty && c.Azure.Empty && c.GCP.Empty && c.Local.Empty)
-}
-
 type Uploader interface {
 	Destination() string
 	Upload(ctx context.Context, snapshot io.Reader, prefix string, timestamp string, suffix string, retain int) error

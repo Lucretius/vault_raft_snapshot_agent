@@ -9,22 +9,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/vault/auth"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClientRefreshesAuthAfterTokenExpires(t *testing.T) {
-	auth := &authStub{
-		tokenExpiration: time.Now(),
+	auth := &clientVaultAPIAuthStub{
+		leaseDuration: time.Minute,
 	}
 
-	client := VaultClient{
-		api: &clientAPIStub{
+	client := NewVaultClient[any, *clientVaultAPIAuthStub](
+		&clientVaultAPIStub{
 			leader: true,
 		},
-		auth:            auth,
-		tokenExpiration: time.Now().Add(time.Second * 1),
-	}
+		auth,
+		time.Now().Add(time.Second*1),
+	)
 
 	_ = client.TakeSnapshot(context.Background(), bufio.NewWriter(&bytes.Buffer{}))
 
@@ -38,33 +37,34 @@ func TestClientRefreshesAuthAfterTokenExpires(t *testing.T) {
 }
 
 func TestClientDoesNotTakeSnapshotIfAuthRefreshFails(t *testing.T) {
-	authStub := &authStub{}
-	clientApi := &clientAPIStub{
+	authStub := &clientVaultAPIAuthStub{}
+	clientApi := &clientVaultAPIStub{
 		leader: true,
 	}
 
-	client := VaultClient{
-		api:             clientApi,
-		auth:            authStub,
-		tokenExpiration: time.Now().Add(time.Second * -1),
-	}
+	initalAuthExpiration := time.Now().Add(time.Second * -1)
+	client := NewVaultClient[any, *clientVaultAPIAuthStub](
+		clientApi,
+		authStub,
+		initalAuthExpiration,
+	)
 
 	err := client.TakeSnapshot(context.Background(), bufio.NewWriter(&bytes.Buffer{}))
 
 	assert.Error(t, err, "TakeSnapshot() returned no error although auth-refresh failed")
-	assert.NotEqual(t, authStub.tokenExpiration, client.tokenExpiration, "TakeSnapshot() refreshed token-expiration although auth-refresh failed")
+	assert.Equal(t, initalAuthExpiration, client.authExpiration, "TakeSnapshot() refreshed auth-expiration although auth-refresh failed")
 	assert.False(t, clientApi.snapshotTaken, "TakeSnapshot() took snapshot although aut-refresh failed")
 }
 
 func TestClientOnlyTakesSnaphotWhenLeader(t *testing.T) {
-	clientApi := &clientAPIStub{
+	clientApi := &clientVaultAPIStub{
 		leader: false,
 	}
-	client := VaultClient{
-		api:             clientApi,
-		auth:            nil,
-		tokenExpiration: time.Now(),
-	}
+	client := NewVaultClient[any, *clientVaultAPIAuthStub](
+		clientApi,
+		&clientVaultAPIAuthStub{},
+		time.Now().Add(time.Minute),
+	)
 
 	ctx := context.Background()
 	writer := bufio.NewWriter(&bytes.Buffer{})
@@ -84,26 +84,26 @@ func TestClientOnlyTakesSnaphotWhenLeader(t *testing.T) {
 }
 
 func TestClientDoesNotTakeSnapshotIfLeaderCheckFails(t *testing.T) {
-	authStub := &authStub{}
-	api := &clientAPIStub{
+	authStub := &clientVaultAPIAuthStub{}
+	api := &clientVaultAPIStub{
 		sysLeaderFails: true,
 		leader:         true,
 	}
 
-	client := VaultClient{
-		api:             api,
-		auth:            nil,
-		tokenExpiration: time.Now(),
-	}
+	client := NewVaultClient[any, *clientVaultAPIAuthStub](
+		api,
+		authStub,
+		time.Now(),
+	)
 
 	err := client.TakeSnapshot(context.Background(), bufio.NewWriter(&bytes.Buffer{}))
 
 	assert.Error(t, err, "TakeSnapshot() reported success or returned no error when leader-check failed")
 	assert.False(t, api.snapshotTaken, "TakeSnapshot() took snapshot when leader-check failed")
-	assert.NotEqual(t, authStub.tokenExpiration, client.tokenExpiration)
+	assert.NotEqual(t, authStub.leaseDuration, client.authExpiration)
 }
 
-func assertAuthRefresh(t *testing.T, refreshed bool, client VaultClient, auth *authStub) {
+func assertAuthRefresh(t *testing.T, refreshed bool, client *VaultClient[any, *clientVaultAPIAuthStub], auth *clientVaultAPIAuthStub) {
 	t.Helper()
 
 	if auth.refreshed != refreshed {
@@ -115,26 +115,12 @@ func assertAuthRefresh(t *testing.T, refreshed bool, client VaultClient, auth *a
 		}
 	}
 
-	if refreshed && client.tokenExpiration != auth.tokenExpiration {
-		t.Fatalf("client did not accept tokenExpiration from auth! client: %v, auth: %v", client.tokenExpiration, auth.tokenExpiration)
+	if refreshed {
+		assert.WithinDuration(t, time.Now().Add(auth.leaseDuration/2), client.authExpiration, time.Second, "client did not refresh auth-expiration!")
 	}
 }
 
-type authStub struct {
-	tokenExpiration time.Time
-	refreshed       bool
-}
-
-func (a *authStub) Refresh(api auth.VaultAuthAPI) (time.Time, error) {
-	a.refreshed = true
-	var err error
-	if a.tokenExpiration.IsZero() {
-		err = errors.New("refresh of auth failed")
-	}
-	return a.tokenExpiration, err
-}
-
-type clientAPIStub struct {
+type clientVaultAPIStub struct {
 	leader          bool
 	sysLeaderFails  bool
 	snapshotTaken   bool
@@ -142,14 +128,18 @@ type clientAPIStub struct {
 	snapshotWriter  io.Writer
 }
 
-func (stub *clientAPIStub) TakeSnapshot(ctx context.Context, writer io.Writer) error {
+func (stub *clientVaultAPIStub) Address() string {
+	return "test"
+}
+
+func (stub *clientVaultAPIStub) TakeSnapshot(ctx context.Context, writer io.Writer) error {
 	stub.snapshotTaken = true
 	stub.snapshotContext = ctx
 	stub.snapshotWriter = writer
 	return nil
 }
 
-func (stub *clientAPIStub) IsLeader() (bool, error) {
+func (stub *clientVaultAPIStub) IsLeader() (bool, error) {
 	if stub.sysLeaderFails {
 		return false, errors.New("leader-Check failed")
 	}
@@ -157,6 +147,20 @@ func (stub *clientAPIStub) IsLeader() (bool, error) {
 	return stub.leader, nil
 }
 
-func (stub *clientAPIStub) AuthAPI() auth.VaultAuthAPI {
-	return nil
+func (stub *clientVaultAPIStub) RefreshAuth(ctx context.Context, auth *clientVaultAPIAuthStub) (time.Duration, error) {
+	return auth.Login(ctx, nil)
+}
+
+type clientVaultAPIAuthStub struct {
+	leaseDuration time.Duration
+	refreshed     bool
+}
+
+func (a *clientVaultAPIAuthStub) Login(ctx context.Context, api any) (time.Duration, error) {
+	a.refreshed = true
+	var err error
+	if a.leaseDuration <= 0 {
+		err = errors.New("refresh of auth failed")
+	}
+	return a.leaseDuration, err
 }

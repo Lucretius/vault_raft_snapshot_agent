@@ -90,8 +90,11 @@ uploaders:
 ### Environment variables
 Vault Raft Snapshot Agent supports configuration with environment variables. For some common options there are shortcuts defined:
 - `VAULT_ADDR` configures the url to the vault-server (same as `vault.url`)
-- `AWS_ACCESS_KEY_ID` configures the access key for the AWS uploader (same as `uploaders.aws.credentials.key`)
-- `SECRET_ACCESS_KEY` configures the access secret for the AWS uploader (same as `uploaders.aws.credentials.secret`)
+- `AWS_ACCESS_KEY_ID` configures the access key for the AWS uploader (same as `uploaders.aws.credentials.key`) and AWS EC2 authentication
+- `AWS_SECRET_ACCESS_KEY` configures the access secret for the AWS uploader (same as `uploaders.aws.credentials.secret`) and AWS EC2 authentication
+- `AWS_SESSION_TOKEN` configures the session-token for AWS EC2 authentication
+- `AWS_SHARED_CREDENTIALS_FILE` configures AWS EC2 authentication from a file
+
 
 Any other option can be set by prefixing `VRSA_` to the uppercased path to the key and replacing `.` with `_`. For example `VRSA_SNAPSHOTS_FREQUENCY=<value>` configures the snapshot-frequency and `VRSA_VAULT_AUTH_TOKEN=<value>` configures the token authentication for vault.
 
@@ -146,20 +149,116 @@ An AppRole allows the snapshot agent to automatically rotate tokens to avoid lon
 vault:
   auth:
     approle:
-      id: "<role-id>
+      role: "<role-id>"
       secret: "<secret-id>"
 ```
 
 ##### Configuration options
-- `id` **(required)** - specifies the role_id used to call the Vault API.  See the authentication steps below
+- `role` **(required)** - specifies the role_id used to call the Vault API.  See the authentication steps below
 - `secret` **(required)** - specifies the secret_id used to call the Vault API
 - `path` *(default: approle)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
 
 To allow the App-Role access to the snapshots you should run the following commands on your vault-cluster:
 ```
-vault write auth/approle/role/snapshot token_policies="snapshots"
-vault read auth/approle/role/snapshot/<role-id>
-vault write -f auth/approle/role/snapshot/<secret-id>
+vault write auth/<path>/role/snapshot token_policies=snapshots
+vault read auth/<path>/role/snapshot/<role-id>
+vault write -f auth/<path>/role/snapshot/<secret-id>
+```
+
+#### AWS authentication
+
+Uses AWS for authentication (see the [Vault docs](https://developer.hashicorp.com/vault/docs/auth/aws)).
+
+ 
+##### Minimal configuration
+```
+vault:
+  auth:
+    aws:
+      role: "<role>"
+```
+
+##### Configuration options
+- `role` **(required)** - specifies the role used to call the Vault API.  See the authentication steps below
+- `ec2Nonce` - enables EC2 authentication and sets the required nonce
+- `ec2SignatureType` *(default: pkcs7)* - changes the signature-type for EC2 authentication; valid values are `identity`, `pkcs7` and `rs2048`
+- `iamServerIdHeader` - specifies the server-id-header when using IAM authtype
+- `region` - specifies the aws region to use
+- `path` *(default: aws)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+By default AWS authentication uses the iam authentication type unless `ec2Nonce` is set. The credentials for IAM authentication must be provided via environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` or `AWS_SHARED_CREDENTIALS_FILE`). While relative paths normally are resolved relative to the configuration-file, `AWS_SHARED_CREDENTIALS_FILE` must be specified as an absolute path.
+
+To allow the access to the snapshots you should run the following commands on your vault-cluster:
+```
+# for ec2 authentication
+vault write auth/<path>/role/<role> auth_type=ec2 bound_ami_id=<ami-id> policies=snapshots max_ttl=500h
+
+# for iam authentication
+vault write auth/<path>/role/<role> auth_type=iam bound_iam_principal_arn=<princial-arn> policies=snapshots max_ttl=500h
+```
+
+#### Azure authentication
+
+Authentication using Azure (see [the Vault docs](https://developer.hashicorp.com/vault/docs/auth/azure)).
+
+ 
+##### Minimal configuration
+```
+vault:
+  auth:
+    azure:
+      role: "<role-id>"
+```
+
+##### Configuration options
+- `role` **(required)** - specifies the role used to call the Vault API.  See the authentication steps below
+- `resource` - optional azure resource
+- `path` *(default: azure)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+To allow the access to the snapshots you should run the following commands on your vault-cluster:
+```
+vault write auth/<path>/role/<role> \
+    policies="snapshots" \
+    bound_subscription_ids=<subscription-ids> \
+    bound_resource_groups=<resource-group>
+```
+
+#### Google Cloud authentication
+
+Authentication using Google Cloud GCE or IAM authentication (see [the Vault docs](https://developer.hashicorp.com/vault/docs/auth/gcp)).
+
+ 
+##### Minimal configuration
+```
+vault:
+  auth:
+    gcp:
+      role: "<role>"
+```
+
+##### Configuration options
+- `role` **(required)** - specifies the role used to call the Vault API.  See the authentication steps below
+- `serviceAccountEmail` - activates iam authentication and s specifies the service-account to use
+- `path` *(default: gcp)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+By default Google Cloud authentication uses the gce authentication type unless `serviceAccountEmail` is set.
+
+To allow the access to the snapshots you should run the following commands on your vault-cluster:
+```
+# for iam authentication type
+vault write auth/<path>/role/<role> \
+    type="iam" \
+    policies="snapshots" \
+    bound_service_accounts="<service-account-email>"
+
+# for gce authentication type
+vault write auth/<path>/role/<role> \
+    type="gce" \
+    policies="snapshots" \
+    bound_projects="<projects>" \
+    bound_zones="<zones>" \
+    bound_labels="<labels>" \
+    bound_service_accounts="<service-acoount-email>"
 ```
 
 
@@ -177,13 +276,38 @@ vault:
 ##### Configuration options 
 - `role` **(required)** - specifies vault k8s auth role
 - `path` *(default: kubernetes)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
-- `jwtPath` *(default: /var/run/secrets/kubernetes.io/serviceaccount/token)* - specifies the path to the file with the JWT-Token for the kubernetes Service-Account
+- `jwtPath` *(default: /var/run/secrets/kubernetes.io/serviceaccount/token)* - specifies the path to the file with the JWT-Token for the kubernetes service-account. You may specify the path relative to the location of the configuration file.
 
 To allow kubernetes access to the snapshots you should run the following commands on your vault-cluster:
 ```
-  kubectl -n <your-vault-namespace> exec -it <vault-pod-name> -- vault write auth/<kubernetes.path>/role/<kubernetes.role> bound_service_account_names=*  bound_service_account_namespaces=<namespace of your vault-raft-snapshot-agent-pod> policies=snapshots ttl=24h
+  kubectl -n <your-vault-namespace> exec -it <vault-pod-name> -- vault write auth/<path>/role/<kubernetes.role> bound_service_account_names=*  bound_service_account_namespaces=<namespace of your vault-raft-snapshot-agent-pod> policies=snapshots ttl=24h
 ```
 Depending on your setup you can restrict access to specific service-account-names and/or namespaces.
+
+#### LDAP authentication
+Authentication using LDAP (see [the Vault docs](https://developer.hashicorp.com/vault/docs/auth/ldap)).
+
+##### Minimal configuration
+```
+vault:
+  auth:
+    ldap:
+      role: "test"
+```
+
+##### Configuration options 
+- `username` **(required)** - the username
+- `password` **(required)** - the password
+- `path` *(default: ldap)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+To allow access to the snapshots you should run the following commands on your vault-cluster:
+```
+# allow access for a specific user
+vault write auth/<path>/users/<username> policies=snapshot
+
+# allow access based on group
+vault write auth/<path>/groups/<group> policies=snapshots
+```
 
 
 #### Token authentication
@@ -196,6 +320,32 @@ vault:
 
 ##### Configuration options
 - `token` **(required)** - specifies the token used to login
+
+
+#### User and Password authentication
+Authentication using username and password (see [the Vault docs](https://developer.hashicorp.com/vault/docs/auth/userpass)).
+
+##### Minimal configuration
+```
+vault:
+  auth:
+    userpass:
+      username: "<username>"
+      password: "<password>"
+```
+
+##### Configuration options 
+- `username` **(required)** - the username
+- `password` **(required)** - the password
+- `path` *(default: userpass)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
+
+To allow access to the snapshots you should run the following commands on your vault-cluster:
+
+```
+vault write auth/<path>/users/<username> \
+    password=<password> \
+    policies=snapshots
+```
 
 
 ### Snapshot configuration
@@ -260,7 +410,7 @@ uploaders:
       secret: <secret>
 ```
 - `key` **(required)** - specifies the access key. It's recommended to use the standard `AWS_ACCESS_KEY_ID` env var, though
-- `secret` **(required)** - specifies the secret It's recommended to use the standard `SECRET_ACCESS_KEY` env var, though
+- `secret` **(required)** - specifies the secret It's recommended to use the standard `AWS_SECRET_ACCESS_KEY` env var, though
 
 
 #### Azure Storage
@@ -284,3 +434,4 @@ uploaders:
 ## Contributors
 - Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius/vault_raft_snapshot_agent/)
 - This build contains improvements done by [@Boostport](https://github.com/Boostport/vault_raft_snapshot_agent/)
+- support for additional authentication methods based on code from [@alexeiser](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/25)
