@@ -186,14 +186,14 @@ vault:
 - `region` - specifies the aws region to use
 - `path` *(default: aws)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
 
-By default AWS authentication uses the iam authentication type unless `ec2Nonce` is set. The credentials for IAM authentication must be provided via environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` or `AWS_SHARED_CREDENTIALS_FILE`). While relative paths normally are resolved relative to the configuration-file, `AWS_SHARED_CREDENTIALS_FILE` must be specified as an absolute path.
+By default AWS authentication uses the IAM authentication type unless `ec2Nonce` is set. The credentials for IAM authentication must be provided via environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` or `AWS_SHARED_CREDENTIALS_FILE`). While relative paths normally are resolved relative to the configuration-file, `AWS_SHARED_CREDENTIALS_FILE` must be specified as an absolute path.
 
 To allow the access to the snapshots you should run the following commands on your vault-cluster:
 ```
-# for ec2 authentication
+# for AWS EC2 authentication
 vault write auth/<path>/role/<role> auth_type=ec2 bound_ami_id=<ami-id> policies=snapshots max_ttl=500h
 
-# for iam authentication
+# for IAM authentication
 vault write auth/<path>/role/<role> auth_type=iam bound_iam_principal_arn=<princial-arn> policies=snapshots max_ttl=500h
 ```
 
@@ -238,20 +238,20 @@ vault:
 
 ##### Configuration options
 - `role` **(required)** - specifies the role used to call the Vault API.  See the authentication steps below
-- `serviceAccountEmail` - activates iam authentication and s specifies the service-account to use
+- `serviceAccountEmail` - activates IAM authentication and specifies the service-account to use
 - `path` *(default: gcp)* - specifies the backend-name used to select the login-endpoint (`auth/<path>/login`)
 
-By default Google Cloud authentication uses the gce authentication type unless `serviceAccountEmail` is set.
+By default Google Cloud authentication uses the GCE authentication type unless `serviceAccountEmail` is set.
 
 To allow the access to the snapshots you should run the following commands on your vault-cluster:
 ```
-# for iam authentication type
+# for IAM authentication type
 vault write auth/<path>/role/<role> \
     type="iam" \
     policies="snapshots" \
     bound_service_accounts="<service-account-email>"
 
-# for gce authentication type
+# for GCE authentication type
 vault write auth/<path>/role/<role> \
     type="gce" \
     policies="snapshots" \
@@ -394,7 +394,7 @@ uploaders:
     authUrl: <auth-url>
 ```
 
-Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local` and `aws` will write to both locations. Each options can be specified exactly once - thus is is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-entries.
+Note that if you specify more than one storage option, *all* soecified storages will be written to.  For example, specifying `local` and `aws` will write to both locations. When using multiple remote storages, increase the timeout allowed via `snapahots.timeout` for larger raft databases. Each options can be specified exactly once - it is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-storage-options.
 
 
 #### AWS S3 Upload
