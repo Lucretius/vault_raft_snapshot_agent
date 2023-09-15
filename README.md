@@ -433,5 +433,6 @@ uploaders:
 
 ## Contributors
 - Vault Raft Snapshot Agent was originally developed by [@Lucretius](https://github.com/Lucretius/vault_raft_snapshot_agent/)
-- This build contains improvements done by [@Boostport](https://github.com/Boostport/vault_raft_snapshot_agent/)
+- contains improvements done by [@Boostport](https://github.com/Boostport/vault_raft_snapshot_agent/)
+- enhancements for azure-uploader by [@vikramhansawat](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/26)
 - support for additional authentication methods based on code from [@alexeiser](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/25)
