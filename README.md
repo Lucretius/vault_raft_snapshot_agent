@@ -394,7 +394,7 @@ uploaders:
     authUrl: <auth-url>
 ```
 
-Note that if you specify more than one storage option, *all* soecified storages will be written to.  For example, specifying `local` and `aws` will write to both locations. When using multiple remote storages, increase the timeout allowed via `snapahots.timeout` for larger raft databases. Each options can be specified exactly once - it is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-storage-options.
+Note that if you specify more than one storage option, *all* soecified storages will be written to.  For example, specifying `local` and `aws` will write to both locations. When using multiple remote storages, increase the timeout allowed via `snapahots.timeout` for larger raft databases. Each option can be specified exactly once; it is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-storage-options.
 
 
 #### AWS S3 Upload
