@@ -383,10 +383,15 @@ uploaders:
     accountKey: <key>
     container: <container>
     cloudDomain: <domain>
-  google:
+  gcp:
     bucket: <bucket>
   local:
     path: <path>
+  swift:
+    container: <container>
+    username: <username>
+    apiKey: <api-key>
+    authUrl: <auth-url>
 ```
 
 Note that if you specify more than one storage option, *all* options will be written to.  For example, specifying `local` and `aws` will write to both locations. Each options can be specified exactly once - thus is is currently not possible to e.g. upload to multiple aws regions by specifying multiple `aws`-entries.
@@ -420,12 +425,23 @@ uploaders:
 - `cloudDomain` *(default: blob.core.windows.net) - domain of the cloud-service to use
 
 
-#### Google Storage
+#### Google Cloud Storage
 `bucket` **(required)** - the Google Storage Bucket to write to.  Auth is expected to be default machine credentials.
 
 
 #### Local Storage
 `path` **(required)** - fully qualified path, not including file name, for where the snapshot should be written.  i.e. `/raft/snapshots`
+
+#### Openstack Swift Storage
+- `container` **(required)** - the name of the container to write to
+- `username` **(required)** - the username used for authentication
+- `apiKey` **(required)** - the api-key used for authentication
+- `authUrl` **(required)** - the auth-url to authenicate against
+- `region` - optional region to use eg "LON", "ORD"
+- `domain` - optional user's domain name
+- `tenantId` - optional id of the tenant
+- `timeout` *(default: 60s)** - timeout for snapshot-uploads
+
 
 
 ## License
@@ -436,3 +452,4 @@ uploaders:
 - contains improvements done by [@Boostport](https://github.com/Boostport/vault_raft_snapshot_agent/)
 - enhancements for azure-uploader by [@vikramhansawat](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/26)
 - support for additional authentication methods based on code from [@alexeiser](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/25)
+- support for Openstack Swift Storage based on code from [@Pyjou](https://github.com/Lucretius/vault_raft_snapshot_agent/pull/19)

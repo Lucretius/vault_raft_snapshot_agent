@@ -14,18 +14,18 @@ import (
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-type AWSConfig struct {
-	Credentials             AWSCredentialsConfig `default:"{\"Empty\": true}"`
-	Bucket                  string               `validate:"required_if=Empty false"`
-	KeyPrefix               string               `mapstructure:",omitifempty"`
-	Endpoint                string               `mapstructure:",omitifempty"`
+type AWSUploaderConfig struct {
+	Credentials             AWSUploaderCredentialsConfig `default:"{\"Empty\": true}"`
+	Bucket                  string                       `validate:"required_if=Empty false"`
+	KeyPrefix               string                       `mapstructure:",omitifempty"`
+	Endpoint                string                       `mapstructure:",omitifempty"`
 	Region                  string
 	UseServerSideEncryption bool
 	ForcePathStyle          bool
 	Empty                   bool
 }
 
-type AWSCredentialsConfig struct {
+type AWSUploaderCredentialsConfig struct {
 	Key    string `validate:"required_if=Empty false"`
 	Secret string `validate:"required_if=Empty false"`
 	Empty  bool
@@ -39,8 +39,8 @@ type awsUploaderImpl struct {
 	sse       bool
 }
 
-func createAWSUploader(config AWSConfig) (*uploader[s3Types.Object], error) {
-	clientConfig, err := awsConfig.LoadDefaultConfig(context.Background(), awsConfig.WithRegion(config.Region))
+func createAWSUploader(ctx context.Context, config AWSUploaderConfig) (*uploader[s3Types.Object], error) {
+	clientConfig, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(config.Region))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load default aws config: %w", err)

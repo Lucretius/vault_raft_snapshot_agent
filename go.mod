@@ -31,6 +31,9 @@ require (
 	google.golang.org/api v0.140.0
 )
 
+// Swift-Uploader
+require github.com/ncw/swift/v2 v2.0.2
+
 // Vault
 require (
 	github.com/hashicorp/vault/api v1.10.0

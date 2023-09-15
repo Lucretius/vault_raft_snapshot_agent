@@ -54,15 +54,15 @@ type snapshotterVaultAPI interface {
 	TakeSnapshot(ctx context.Context, writer io.Writer) error
 }
 
-func CreateSnapshotter(options SnapshotterOptions) (*Snapshotter, error) {
-	c := SnapshotterConfig{}
+func CreateSnapshotter(ctx context.Context, options SnapshotterOptions) (*Snapshotter, error) {
+	data := SnapshotterConfig{}
 	parser := config.NewParser[*SnapshotterConfig](options.ConfigFileName, options.EnvPrefix, options.ConfigFileSearchPaths...)
 
-	if err := parser.ReadConfig(&c, options.ConfigFilePath); err != nil {
+	if err := parser.ReadConfig(&data, options.ConfigFilePath); err != nil {
 		return nil, err
 	}
 
-	snapshotter, err := createSnapshotter(c)
+	snapshotter, err := createSnapshotter(ctx, data)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func CreateSnapshotter(options SnapshotterOptions) (*Snapshotter, error) {
 	parser.OnConfigChange(
 		&SnapshotterConfig{},
 		func(config *SnapshotterConfig) error {
-			if err := snapshotter.reconfigure(*config); err != nil {
+			if err := snapshotter.reconfigure(ctx, *config); err != nil {
 				log.Printf("could not reconfigure snapshotter: %s\n", err)
 				return err
 			}
@@ -81,20 +81,20 @@ func CreateSnapshotter(options SnapshotterOptions) (*Snapshotter, error) {
 	return snapshotter, nil
 }
 
-func createSnapshotter(config SnapshotterConfig) (*Snapshotter, error) {
+func createSnapshotter(ctx context.Context, config SnapshotterConfig) (*Snapshotter, error) {
 	snapshotter := &Snapshotter{}
 
-	err := snapshotter.reconfigure(config)
+	err := snapshotter.reconfigure(ctx, config)
 	return snapshotter, err
 }
 
-func (s *Snapshotter) reconfigure(config SnapshotterConfig) error {
+func (s *Snapshotter) reconfigure(ctx context.Context, config SnapshotterConfig) error {
 	client, err := vault.CreateVaultClient(config.Vault)
 	if err != nil {
 		return err
 	}
 
-	uploaders, err := upload.CreateUploaders(config.Uploaders)
+	uploaders, err := upload.CreateUploaders(ctx, config.Uploaders)
 	if err != nil {
 		return err
 	}

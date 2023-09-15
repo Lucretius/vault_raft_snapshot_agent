@@ -57,7 +57,17 @@ uploaders:
     accountKey: test-key
     container: test-container
     cloudDomain: blob.core.chinacloudapi.cn
-  google:
+  gcp:
     bucket: test-bucket
   local:
     path: .
+  swift:
+    container: test-container
+    username: test-username
+    apiKey: test-api-key
+    authUrl: http://auth.com
+    domain: http://user.com
+    region: test-region
+    tenantId: test-tenant
+    timeout: 180s
+

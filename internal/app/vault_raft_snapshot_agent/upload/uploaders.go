@@ -9,10 +9,11 @@ import (
 )
 
 type UploadersConfig struct {
-	AWS   AWSConfig   `default:"{\"Empty\": true}" mapstructure:"aws"`
-	Azure AzureConfig `default:"{\"Empty\": true}" mapstructure:"azure"`
-	GCP   GCPConfig   `default:"{\"Empty\": true}" mapstructure:"google"`
-	Local LocalConfig `default:"{\"Empty\": true}" mapstructure:"local"`
+	AWS   AWSUploaderConfig   `default:"{\"Empty\": true}"`
+	Azure AzureUploaderConfig `default:"{\"Empty\": true}"`
+	GCP   GCPUploaderConfig   `default:"{\"Empty\": true}"`
+	Local LocalUploaderConfig `default:"{\"Empty\": true}"`
+	Swift SwiftUploaderConfig `default:"{\"Empty\": true}"`
 }
 
 type Uploader interface {
@@ -20,11 +21,11 @@ type Uploader interface {
 	Upload(ctx context.Context, snapshot io.Reader, prefix string, timestamp string, suffix string, retain int) error
 }
 
-func CreateUploaders(config UploadersConfig) ([]Uploader, error) {
+func CreateUploaders(ctx context.Context, config UploadersConfig) ([]Uploader, error) {
 	var uploaders []Uploader
 
 	if !config.AWS.Empty {
-		aws, err := createAWSUploader(config.AWS)
+		aws, err := createAWSUploader(ctx, config.AWS)
 		if err != nil {
 			return nil, err
 		}
@@ -32,7 +33,7 @@ func CreateUploaders(config UploadersConfig) ([]Uploader, error) {
 	}
 
 	if !config.Azure.Empty {
-		azure, err := createAzureUploader(config.Azure)
+		azure, err := createAzureUploader(ctx, config.Azure)
 		if err != nil {
 			return nil, err
 		}
@@ -40,7 +41,7 @@ func CreateUploaders(config UploadersConfig) ([]Uploader, error) {
 	}
 
 	if !config.GCP.Empty {
-		gcp, err := createGCPUploader(config.GCP)
+		gcp, err := createGCPUploader(ctx, config.GCP)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +49,15 @@ func CreateUploaders(config UploadersConfig) ([]Uploader, error) {
 	}
 
 	if !config.Local.Empty {
-		local, err := createLocalUploader(config.Local)
+		local, err := createLocalUploader(ctx, config.Local)
+		if err != nil {
+			return nil, err
+		}
+		uploaders = append(uploaders, local)
+	}
+
+	if !config.Swift.Empty {
+		local, err := createSwiftUploader(ctx, config.Swift)
 		if err != nil {
 			return nil, err
 		}

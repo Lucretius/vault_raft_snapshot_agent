@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type LocalConfig struct {
+type LocalUploaderConfig struct {
 	Path  string `validate:"required_if=Empty false,omitempty,dir"`
 	Empty bool
 }
@@ -17,7 +17,7 @@ type localUploaderImpl struct {
 	path string
 }
 
-func createLocalUploader(config LocalConfig) (uploader[os.FileInfo], error) {
+func createLocalUploader(ctx context.Context, config LocalUploaderConfig) (uploader[os.FileInfo], error) {
 	return uploader[os.FileInfo]{
 		localUploaderImpl{
 			path: config.Path,

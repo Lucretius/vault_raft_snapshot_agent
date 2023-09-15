@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
-type AzureConfig struct {
+type AzureUploaderConfig struct {
 	AccountName   string `validate:"required_if=Empty false"`
 	AccountKey    string `validate:"required_if=Empty false"`
 	ContainerName string `mapstructure:"container" validate:"required_if=Empty false"`
@@ -22,7 +22,7 @@ type azureUploaderImpl struct {
 	container string
 }
 
-func createAzureUploader(config AzureConfig) (*uploader[*container.BlobItem], error) {
+func createAzureUploader(ctx context.Context, config AzureUploaderConfig) (*uploader[*container.BlobItem], error) {
 	credential, err := azblob.NewSharedKeyCredential(config.AccountName, config.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials for azure: %w", err)
