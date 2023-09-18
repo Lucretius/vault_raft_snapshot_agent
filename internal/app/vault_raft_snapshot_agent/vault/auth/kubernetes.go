@@ -1,14 +1,13 @@
 package auth
 
 import (
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/config"
 	"github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
 type KubernetesAuthConfig struct {
-	Path    string      `default:"kubernetes"`
-	Role    string      `validate:"required_if=Empty false"`
-	JWTPath config.Path `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" validate:"omitempty,file,required_if=Empty false"`
+	Path    string `default:"kubernetes"`
+	Role    string `validate:"required_if=Empty false"`
+	JWTPath string `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" resolve-path:"" validate:"omitempty,file,required_if=Empty false"`
 	Empty   bool
 }
 

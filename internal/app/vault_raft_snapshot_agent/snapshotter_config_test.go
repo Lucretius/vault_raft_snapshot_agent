@@ -30,7 +30,7 @@ func defaultJwtPath(def string) string {
 	return "/var/run/secrets/kubernetes.io/serviceaccount/token"
 }
 
-func relativeTo(configFile string, file string) config.Path {
+func relativeTo(configFile string, file string) string {
 	if !filepath.IsAbs(file) && !strings.HasPrefix(file, "/") {
 		file = filepath.Join(filepath.Dir(configFile), file)
 	}
@@ -40,7 +40,7 @@ func relativeTo(configFile string, file string) config.Path {
 		file = filepath.Clean(file)
 	}
 
-	return config.Path(file)
+	return file
 }
 
 func TestReadCompleteConfig(t *testing.T) {

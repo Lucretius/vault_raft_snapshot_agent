@@ -12,7 +12,7 @@ import (
 )
 
 type rattlesnakeConfigStub struct {
-	Path Path `default:"/test/file"`
+	Path string `default:"/test/file" resolve-path:""`
 	Url	 string `validate:"omitempty,http_url"`
 }
 
@@ -30,7 +30,7 @@ func TestUnmarshalResolvesRelativePaths(t *testing.T) {
 	err = rattlesnake.Unmarshal(&config)
 
 	assert.NoError(t, err, "Unmarshal failed unexpectedly")
-	assert.Equal(t, Path(filepath.Clean(fmt.Sprintf("%s/file.ext", wd))), config.Path)
+	assert.Equal(t, filepath.Clean(fmt.Sprintf("%s/file.ext", wd)), config.Path)
 }
 
 func TestUnmarshalSetsDefaultValues(t *testing.T) {
@@ -40,7 +40,7 @@ func TestUnmarshalSetsDefaultValues(t *testing.T) {
 	err := rattlesnake.Unmarshal(&config)
 
 	assert.NoError(t, err, "Unmarshal failed unexpectedly")
-	assert.Equal(t, Path("/test/file"), config.Path)
+	assert.Equal(t, "/test/file", config.Path)
 }
 
 func TestUnmarshalValidatesValues(t *testing.T) {

@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/creasty/defaults"
@@ -13,8 +12,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 )
-
-type Path string
 
 // a rattlesnake is a viper adapted to our needs ;-)
 type rattlesnake struct {
@@ -72,18 +69,17 @@ func (r rattlesnake) Unmarshal(config interface{}) error {
 		return fmt.Errorf("could not bind env vars for configuration: %s", err)
 	}
 
-	decodeHook := mapstructure.ComposeDecodeHookFunc(
-		mapstructure.StringToTimeDurationHookFunc(),
-		mapstructure.StringToSliceHookFunc(","),
-		newPathResolverHook(filepath.Dir(r.ConfigFileUsed())),
-	)
-
-	if err := r.v.Unmarshal(config, viper.DecodeHook(decodeHook)); err != nil {
+	if err := r.v.Unmarshal(config); err != nil {
 		return err
 	}
 
 	if err := defaults.Set(config); err != nil {
 		return fmt.Errorf("could not set configuration's default-values: %s", err)
+	}
+
+	pathResolver := NewPathResolver(filepath.Dir(r.ConfigFileUsed()))
+	if err := pathResolver.Resolve(config); err != nil {
+		return fmt.Errorf("could not resolve relative paths in configuration: %s", err)
 	}
 
 	validate := validator.New()
@@ -104,25 +100,6 @@ func (r rattlesnake) OnConfigChange(run func()) {
 func (r rattlesnake) IsConfigurationNotFoundError(err error) bool {
 	_, notfound := err.(viper.ConfigFileNotFoundError)
 	return notfound
-}
-
-func newPathResolverHook(workdir string) mapstructure.DecodeHookFuncType {
-	return func(dataType reflect.Type, targetType reflect.Type, data interface{}) (interface{}, error) {
-		if dataType.Kind() != reflect.String {
-			return data, nil
-		}
-
-		if targetType != reflect.TypeOf(Path("")) {
-			return data, nil
-		}
-
-		path := data.(string)
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(workdir, path)
-		}
-
-		return Path(filepath.Clean(path)), nil
-	}
 }
 
 // implements automatic unmarshalling from environment variables

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/config"
 	"github.com/Argelbargel/vault-raft-snapshot-agent/internal/app/vault_raft_snapshot_agent/test"
 
 	"github.com/hashicorp/vault/api/auth/kubernetes"
@@ -15,9 +14,9 @@ import (
 func TestCreateKubernetesAuth(t *testing.T) {
 	jwtPath := fmt.Sprintf("%s/jwt", t.TempDir())
 	config := KubernetesAuthConfig{
-		Role: "test-role",
-		JWTPath: config.Path(jwtPath),
-		Path: "test-path",
+		Role:    "test-role",
+		JWTPath: jwtPath,
+		Path:    "test-path",
 	}
 
 	err := test.WriteFile(t, jwtPath, "test")
@@ -26,7 +25,7 @@ func TestCreateKubernetesAuth(t *testing.T) {
 	expectedAuthMethod, err := kubernetes.NewKubernetesAuth(
 		config.Role,
 		kubernetes.WithMountPath(config.Path),
-		kubernetes.WithServiceAccountTokenPath(string(config.JWTPath)),
+		kubernetes.WithServiceAccountTokenPath(config.JWTPath),
 	)
 	assert.NoError(t, err, "NewKubernetesAuth failed unexpectedly")
 
