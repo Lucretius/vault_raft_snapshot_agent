@@ -15,15 +15,15 @@ var (
 	ErrorInvalidType error = errors.New("subject must be a struct passed by pointer")
 )
 
-type resolver struct {
+type pathResolver struct {
 	baseDir string
 }
 
-func newPathResolver(baseDir string) resolver {
-	return resolver{baseDir}
+func newPathResolver(baseDir string) pathResolver {
+	return pathResolver{baseDir}
 }
 
-func (r resolver) Resolve(subject interface{}) error {
+func (r pathResolver) Resolve(subject interface{}) error {
 	if reflect.TypeOf(subject).Kind() != reflect.Ptr {
 		return ErrorInvalidType
 	}
@@ -33,7 +33,7 @@ func (r resolver) Resolve(subject interface{}) error {
 	return r.resolve(s)
 }
 
-func (r resolver) resolve(value reflect.Value) error {
+func (r pathResolver) resolve(value reflect.Value) error {
 	t := value.Type()
 
 	if t.Kind() != reflect.Struct {
@@ -71,7 +71,7 @@ func (r resolver) resolve(value reflect.Value) error {
 	return nil
 }
 
-func (r resolver) resolvePath(field reflect.Value, baseDir string) error {
+func (r pathResolver) resolvePath(field reflect.Value, baseDir string) error {
 	path := field.String()
 	if baseDir == "" {
 		baseDir = r.baseDir
