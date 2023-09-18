@@ -10,9 +10,9 @@ import (
 
 func TestResolvesRelativePaths(t *testing.T) {
 	var test struct {
-		Path      string `resolve-path:""`
-		FixedPath string `resolve-path:"/tmp/"`
-		Other     string
+		Path         string `resolve-path:""`
+		FixedPath    string `resolve-path:"/tmp/"`
+		Other        string
 		AbsolutePath string `resolve-path:""`
 	}
 	test.Path = "./relative"
@@ -21,7 +21,7 @@ func TestResolvesRelativePaths(t *testing.T) {
 	test.AbsolutePath = "/test/abs"
 
 	dir := t.TempDir()
-	resolver := NewPathResolver(dir)
+	resolver := newPathResolver(dir)
 	err := resolver.Resolve(&test)
 
 	assert.NoError(t, err, "resolver.resolve failed unexepectedly")
@@ -40,14 +40,14 @@ func TestResolvesRecursively(t *testing.T) {
 	innerPtr := inner{"./innerPtr"}
 
 	var outer struct {
-		Inner inner
+		Inner    inner
 		InnerPtr *inner
 	}
 	outer.Inner.Path = "./inner"
 	outer.InnerPtr = &innerPtr
 
 	dir := t.TempDir()
-	resolver := NewPathResolver(dir)
+	resolver := newPathResolver(dir)
 	err := resolver.Resolve(&outer)
 
 	assert.NoError(t, err, "resolver.resolve failed unexepectedly")

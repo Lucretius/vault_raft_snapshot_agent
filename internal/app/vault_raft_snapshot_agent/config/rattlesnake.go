@@ -77,7 +77,7 @@ func (r rattlesnake) Unmarshal(config interface{}) error {
 		return fmt.Errorf("could not set configuration's default-values: %s", err)
 	}
 
-	pathResolver := NewPathResolver(filepath.Dir(r.ConfigFileUsed()))
+	pathResolver := newPathResolver(filepath.Dir(r.ConfigFileUsed()))
 	if err := pathResolver.Resolve(config); err != nil {
 		return fmt.Errorf("could not resolve relative paths in configuration: %s", err)
 	}

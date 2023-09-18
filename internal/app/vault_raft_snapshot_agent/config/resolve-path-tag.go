@@ -19,7 +19,7 @@ type resolver struct {
 	baseDir string
 }
 
-func NewPathResolver(baseDir string) resolver {
+func newPathResolver(baseDir string) resolver {
 	return resolver{baseDir}
 }
 
