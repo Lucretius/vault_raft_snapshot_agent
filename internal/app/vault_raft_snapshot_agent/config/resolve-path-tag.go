@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	ErrorInvalidType error = errors.New("subject must be a struct passed by pointer")
+	errorInvalidType error = errors.New("subject must be a struct passed by pointer")
 )
 
 type pathResolver struct {
@@ -25,7 +25,7 @@ func newPathResolver(baseDir string) pathResolver {
 
 func (r pathResolver) Resolve(subject interface{}) error {
 	if reflect.TypeOf(subject).Kind() != reflect.Ptr {
-		return ErrorInvalidType
+		return errorInvalidType
 	}
 
 	s := reflect.ValueOf(subject).Elem()
@@ -37,7 +37,7 @@ func (r pathResolver) resolve(value reflect.Value) error {
 	t := value.Type()
 
 	if t.Kind() != reflect.Struct {
-		return ErrorInvalidType
+		return errorInvalidType
 	}
 
 	for i := 0; i < t.NumField(); i++ {
