@@ -1,4 +1,8 @@
 ![Build](https://github.com/Lucretius/vault_raft_snapshot_agent/workflows/Build/badge.svg?branch=master)
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
+
+⛔️ This project is no longer being supported as I have not needed to use Vault for some time.  If you wish to continue to use this project, please consider forking it or check out one of the existing forks (see [this](https://github.com/Lucretius/vault_raft_snapshot_agent/issues/28) discussion) ⛔️
 
 # Raft Snapshot Agent
 
