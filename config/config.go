@@ -14,6 +14,7 @@ type Configuration struct {
 	Address         string      `json:"addr"`
 	Retain          int64       `json:"retain"`
 	Frequency       string      `json:"frequency"`
+	Timeout         string      `json:"timeout,omitempty"`
 	AWS             S3Config    `json:"aws_storage"`
 	Local           LocalConfig `json:"local_storage"`
 	GCP             GCPConfig   `json:"google_storage"`
