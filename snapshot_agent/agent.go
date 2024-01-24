@@ -19,6 +19,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	vaultApi "github.com/hashicorp/vault/api"
+	vaultAuthAws "github.com/hashicorp/vault/api/auth/aws"
+	hashiAwsUtil "github.com/hashicorp/go-secure-stdlib/awsutil"
+
 )
 
 type Snapshotter struct {
@@ -71,10 +74,16 @@ func (s *Snapshotter) ConfigureVaultClient(config *config.Configuration) error {
 		return err
 	}
 	s.API = api
-	if config.VaultAuthMethod == "k8s" {
+
+	switch config.VaultAuthMethod {
+	case "k8s":
 		return s.SetClientTokenFromK8sAuth(config)
+	case "aws":
+		return s.SetClientTokenFromAwsAuth(config)
+	default:
+		return s.SetClientTokenFromAppRole(config)
 	}
-	return s.SetClientTokenFromAppRole(config)
+
 }
 
 func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) error {
@@ -95,9 +104,40 @@ func (s *Snapshotter) SetClientTokenFromAppRole(config *config.Configuration) er
 	return nil
 }
 
+func (s *Snapshotter) SetClientTokenFromAwsAuth(config *config.Configuration) error {
+	ctx := context.Background()
+
+	var awsAuthOpts = []vaultAuthAws.LoginOption{}
+
+	if config.AuthNonce != "" {
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithNonce(config.AuthNonce), vaultAuthAws.WithEC2Auth())
+	} else {
+		region, err := hashiAwsUtil.GetRegion("")
+		if err != nil {
+			return fmt.Errorf("error determining aws region: %s", err)
+		}
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithIAMAuth(), vaultAuthAws.WithRegion(region))
+	}
+
+	if config.AuthRole != "" {
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithRole(config.AuthRole))
+	}
+	if config.AuthPath != "" {
+		awsAuthOpts = append(awsAuthOpts, vaultAuthAws.WithMountPath(config.AuthPath))
+	}
+
+	awsAuth, err := vaultAuthAws.NewAWSAuth(awsAuthOpts...)
+	resp, err := s.API.Auth().Login(ctx, awsAuth)
+	if err != nil {
+		return fmt.Errorf("error logging into aws auth backend: %s", err)
+	}
+	s.TokenExpiration = time.Now().Add(time.Duration((time.Second * time.Duration(resp.Auth.LeaseDuration)) / 2))
+	return nil
+}
+
 func (s *Snapshotter) SetClientTokenFromK8sAuth(config *config.Configuration) error {
 
-	if config.K8sAuthPath == "" || config.K8sAuthRole == "" {
+	if config.AuthPath == "" || config.AuthRole == "" {
 		return errors.New("missing k8s auth definitions")
 	}
 
@@ -106,11 +146,11 @@ func (s *Snapshotter) SetClientTokenFromK8sAuth(config *config.Configuration) er
 		return err
 	}
 	data := map[string]string{
-		"role": config.K8sAuthRole,
+		"role": config.AuthRole,
 		"jwt":  string(jwt),
 	}
 
-	login := path.Clean("/v1/auth/" + config.K8sAuthPath + "/login")
+	login := path.Clean("/v1/auth/" + config.AuthPath + "/login")
 	req := s.API.NewRequest("POST", login)
 	req.SetJSONBody(data)
 

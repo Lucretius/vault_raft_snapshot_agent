@@ -21,8 +21,9 @@ type Configuration struct {
 	RoleID          string      `json:"role_id"`
 	SecretID        string      `json:"secret_id"`
 	Approle         string      `json:"approle"`
-	K8sAuthRole     string      `json:"k8s_auth_role,omitempty"`
-	K8sAuthPath     string      `json:"k8s_auth_path,omitempty"`
+	AuthRole        string      `json:"vault_auth_role,omitempty"`
+	AuthPath        string      `json:"vault_auth_path,omitempty"`
+	AuthNonce       string      `json:"vault_auth_Nonce,omitempty"`
 	VaultAuthMethod string      `json:"vault_auth_method,omitempty"`
 }
 
