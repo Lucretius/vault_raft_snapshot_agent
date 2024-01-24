@@ -10,6 +10,7 @@ require (
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/hashicorp/raft v1.1.2
 	github.com/hashicorp/vault/api v1.0.4
+	github.com/ncw/swift/v2 v2.0.1 // indirect
 	go.opencensus.io v0.22.3 // indirect
 	google.golang.org/api v0.22.0
 )
