@@ -31,6 +31,7 @@ type AzureConfig struct {
 	AccountName   string `json:"account_name"`
 	AccountKey    string `json:"account_key"`
 	ContainerName string `json:"container_name"`
+	CloudName     string `json:"cloud_name"`
 }
 
 // GCPConfig is the configuration for GCP Storage snapshots

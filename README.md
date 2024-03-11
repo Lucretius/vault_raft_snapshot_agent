@@ -132,6 +132,8 @@ Note that if you specify more than one storage option, *all* options will be wri
 
 `container_name` The name of the blob container to write to
 
+`cloud_name` The name of the azure cloud. Allowed values: AzurePublicCloud or AzureChinaCloud
+
 
 ## Authentication
 
